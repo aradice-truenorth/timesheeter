@@ -44,8 +44,15 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@azure/msal-browser": "^4.0.1",
+    "@azure/msal-react": "^3.0.1",
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "overrides": {
+    "@azure/msal-react": {
+      "react": "^16.8.0 || ^17 || ^18 || ^19"
+    }
   }
 }

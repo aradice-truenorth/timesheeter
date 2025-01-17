@@ -10,6 +10,8 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+let sendAuthToWindow: (authCode: string) => void;
+
 const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -19,6 +21,7 @@ const createWindow = (): void => {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
   });
+  sendAuthToWindow = (authCode: string) => mainWindow.webContents.send('authenticated', authCode);
 
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
@@ -51,3 +54,21 @@ app.on('activate', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
+app.setAsDefaultProtocolClient("timesheet");
+
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  // Handle the URL here, extract the access token, etc.
+  console.log("Redirected to:", url);
+  const queryParams = new URL(url).searchParams;
+  const code = queryParams.get("code");
+  const error = queryParams.get("error");
+
+  if (code) {
+    // Exchange code for token or handle it directly
+    console.log("Authentication code:", code);
+    sendAuthToWindow(code);
+  } else if (error) {
+    console.error("Authentication error:", error);
+  }
+});
