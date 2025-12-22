@@ -1,45 +1,36 @@
-import React, { useEffect, useState } from "react";
-import { createRoot, Root } from "react-dom/client";
-import { MsalProvider } from "@azure/msal-react";
-import { useMsal } from "@azure/msal-react";
-import { loginRequest } from "./authConfig";
-import { PublicClientApplication } from "@azure/msal-browser";
-import { msalConfig } from "./authConfig";
+import { useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { LoggedInAccount } from './ipctypes';
+import Home from './home';
+import { DynamicsConfig, DynamicsWebApiContext } from './services/dynamicswebapiconnection';
+import DynamicsWebApi from 'dynamics-web-api';
 
-
-const msalInstance = new PublicClientApplication(msalConfig);
-  
 const root = createRoot(document.body);
 const renderRoot = () => {
     root.render(
-        <MsalProvider instance={msalInstance}>
           <App />
-        </MsalProvider>);
+        );
 };
 
 const App = () => {
-    const { instance } = useMsal();
-    const [authCode, setAuthCode ] = useState<string>(null)
+    const [loggedInAccount, setLoggedInAccount ] = useState<LoggedInAccount>(null)
     useEffect(() => {
         // @ts-ignore
-        window.mainProcess.onAuthenticated((newAuthCode: string) => {
-            setAuthCode(newAuthCode);
-            renderRoot();
+        window.mainProcess.onAuthenticated((loggedInUser: LoggedInAccount) => {
+            setLoggedInAccount(loggedInUser);
         })
     })
   
-    const handleLogin = async () => {
-      try {
-        await instance.loginRedirect(loginRequest);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-  
     return (
       <div>
-        <h1>React Electron with Dynamics 365</h1>
-        {authCode ? <p>You are loggd in !</p>:<button onClick={handleLogin}>Login to Dynamics 365</button>}
+        {loggedInAccount ? (
+          <DynamicsWebApiContext value={new DynamicsWebApi({
+            ...DynamicsConfig,
+            onTokenRefresh: () => loggedInAccount.accessToken
+          } as DynamicsWebApi.Config)}>
+            <Home />
+          </DynamicsWebApiContext>
+        ):<p>Use the browser tab that has been launched to log in</p>}
       </div>
     );
   };
