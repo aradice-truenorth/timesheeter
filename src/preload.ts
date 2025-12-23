@@ -5,5 +5,7 @@ import { LoggedInAccount } from './ipctypes';
 import { IMainProcessAPI } from './mainprocess';
 
 contextBridge.exposeInMainWorld('mainProcess', {
-  onAuthenticated: (callback: (loggedInUser: LoggedInAccount) => void) => ipcRenderer.on('authenticated', (_event, value) => callback(value as LoggedInAccount))
+  onAuthenticated: (callback: (loggedInUser: LoggedInAccount) => void) => ipcRenderer.on('authenticated', (_event, value) => callback(value as LoggedInAccount)),
+  getAllProjects: () => ipcRenderer.invoke('get-all-projects'),
+  getTasksForProject: (msdyn_projectid: string) => ipcRenderer.invoke('get-tasks-for-project', msdyn_projectid)
 } as IMainProcessAPI);
