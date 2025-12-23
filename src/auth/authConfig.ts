@@ -4,7 +4,9 @@ export const msalConfig = {
       authority: "https://login.microsoftonline.com/f737f218-7da9-4dd1-b2b4-3ed14ff4a3f2"
     },
   };
+
+  export const dynamicsResource = "https://truenorthit.crm11.dynamics.com/";
   
   export const loginRequest = {
-    scopes: ["openid", "profile", 'https://truenorthit.crm11.dynamics.com/.default'],
+    scopes: ["openid", "profile", `${dynamicsResource}.default`],
   };

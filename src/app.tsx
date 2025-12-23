@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LoggedInAccount } from './ipctypes';
 import Home from './home';
-import { DynamicsConfig, DynamicsWebApiContext } from './services/dynamicswebapiconnection';
-import DynamicsWebApi from 'dynamics-web-api';
 
 const root = createRoot(document.body);
 const renderRoot = () => {
@@ -24,12 +22,7 @@ const App = () => {
     return (
       <div>
         {loggedInAccount ? (
-          <DynamicsWebApiContext value={new DynamicsWebApi({
-            ...DynamicsConfig,
-            onTokenRefresh: () => loggedInAccount.accessToken
-          } as DynamicsWebApi.Config)}>
             <Home />
-          </DynamicsWebApiContext>
         ):<p>Use the browser tab that has been launched to log in</p>}
       </div>
     );
