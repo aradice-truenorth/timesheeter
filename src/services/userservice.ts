@@ -15,10 +15,11 @@ export class UserService {
                 </filter>
             </entity>
             </fetch>`
-        ).then((result: {value: {internalemailaddress: string; fullname: string;}[]}) => {
+        ).then((result: {value: {internalemailaddress: string; fullname: string; systemuserid: string;}[]}) => {
             return {
                 email: result.value[0].internalemailaddress,
-                name: result.value[0].fullname
+                name: result.value[0].fullname,
+                systemuserid: result.value[0].systemuserid
             } as LoggedInAccount;
         });
     }
