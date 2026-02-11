@@ -62,7 +62,7 @@ const Recording = () => {
     };
 
     return (
-        recordedData ? <Loading /> : <RecordEntry 
+        !recordedData ? <Loading /> : <RecordEntry 
             defaultStartsAt={recordedData.length > 0 ? recordedData[recordedData.length - 1].endsAt : getStartOfDay()} 
             saveEntry={validateEntry} />
     );
