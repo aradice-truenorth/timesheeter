@@ -38,7 +38,7 @@ const fromTimeInputValue = (time: string, referenceDate: Date): Date => {
     return result;
 };
 
-const mruKey = (item: MostRecentlyUsedEntry): string => `${item.project.msdyn_projectid}|${item.task.msdyn_projecttaskid}`;
+const mruKey = (item: MostRecentlyUsedEntry): string => `${item.project.msdyn_projectid}|${item.task.msdyn_projecttaskid}|${item.qualifier}`;
 
 const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
     const { lastEntryEndsAt, startOfDayAt, mostRecentlyUsed, saveEntry, onExit } = props;
@@ -113,7 +113,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
 
         let entry: RecordedTimeEntry;
         if (workMode === "split") {
-            entry = { startsAt, endsAt, isSplit: true, qualifier };
+            entry = { startsAt, endsAt, isSplit: true };
         } else if (workMode === "mru") {
             const selected = mostRecentlyUsed.find(item => mruKey(item) === selectedMruKey);
             if (!selected) {

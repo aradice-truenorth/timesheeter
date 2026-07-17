@@ -5,7 +5,6 @@ export interface SplitTimeEntry {
     startsAt: Date;
     endsAt: Date;
     isSplit: true;
-    qualifier: string;
 }
 
 export interface WorkTimeEntry {

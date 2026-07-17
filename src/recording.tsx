@@ -13,7 +13,7 @@ const getStartOfDay = (): Date =>  {
     return now;
 }
 
-const mruKey = (item: MostRecentlyUsedEntry): string => `${item.project.msdyn_projectid}|${item.task.msdyn_projecttaskid}`;
+const mruKey = (item: MostRecentlyUsedEntry): string => `${item.project.msdyn_projectid}|${item.task.msdyn_projecttaskid}|${item.qualifier}`;
 
 const describeEntry = (entry: RecordedTimeEntry): string =>
     entry.isSplit ? "Split" : `${entry.project.msdyn_subject} / ${entry.task.msdyn_subject}`;
