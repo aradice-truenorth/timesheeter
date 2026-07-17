@@ -20,7 +20,7 @@ export class ProjectService {
             filter: `statecode eq 0`,
             orderBy: ['msdyn_subject']
         }).then((result) => {
-            return result.value;
+            return result.value ?? [];
         });
     }
 
@@ -30,6 +30,6 @@ export class ProjectService {
             select: ['msdyn_projecttaskid', 'msdyn_subject'],
             filter: `statecode eq 0 and _msdyn_project_value eq ${msdyn_projectid}`,
             orderBy: ['msdyn_subject']
-        })).value;
+        })).value ?? [];
     }
 }
