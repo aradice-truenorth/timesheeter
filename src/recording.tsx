@@ -26,7 +26,7 @@ const computeMostRecentlyUsed = (allData: Record<string, RecordedTimeEntry[]>): 
     const seen = new Set<string>();
     const result: MostRecentlyUsedEntry[] = [];
     for (const entry of sorted) {
-        const item = { project: entry.project, task: entry.task };
+        const item = { project: entry.project, task: entry.task, qualifier: entry.qualifier };
         const key = mruKey(item);
         if (seen.has(key)) {
             continue;
@@ -40,7 +40,11 @@ const computeMostRecentlyUsed = (allData: Record<string, RecordedTimeEntry[]>): 
     return result;
 }
 
-const Recording = () => {
+export interface RecordingProps {
+    onExit: () => void;
+}
+
+const Recording: React.FunctionComponent<RecordingProps> = ({ onExit }) => {
     /*
     Screen elements:
         1. Form elements:
@@ -92,7 +96,7 @@ const Recording = () => {
         await window.mainProcess.saveRecordedData(today, updatedEntries);
         setRecordedData(updatedEntries);
         if (!newEntry.isSplit) {
-            const newItem = { project: newEntry.project, task: newEntry.task };
+            const newItem = { project: newEntry.project, task: newEntry.task, qualifier: newEntry.qualifier };
             const newKey = mruKey(newItem);
             setMostRecentlyUsed((current) => [
                 newItem,
@@ -107,7 +111,8 @@ const Recording = () => {
             lastEntryEndsAt={recordedData.length > 0 ? recordedData[recordedData.length - 1].endsAt : null}
             startOfDayAt={getStartOfDay()}
             mostRecentlyUsed={mostRecentlyUsed}
-            saveEntry={validateEntry} />
+            saveEntry={validateEntry}
+            onExit={onExit} />
     );
 };
 export default Recording;

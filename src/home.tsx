@@ -14,7 +14,7 @@ const Home = () => {
 
     switch (homeScreenState) {
         case HomeScreenState.Recording:
-            return <Recording />
+            return <Recording onExit={() => setHomeScreenState(HomeScreenState.Home)} />
         case HomeScreenState.Editing:
             return <EditingDaysList />;
         default:

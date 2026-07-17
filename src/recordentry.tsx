@@ -12,6 +12,7 @@ export interface SaveEntryResult {
 export interface MostRecentlyUsedEntry {
     project: Project;
     task: ProjectTask;
+    qualifier: string;
 }
 
 export interface RecordEntryProps {
@@ -19,6 +20,7 @@ export interface RecordEntryProps {
     startOfDayAt: Date;
     mostRecentlyUsed: MostRecentlyUsedEntry[];
     saveEntry: (entry: RecordedTimeEntry) => Promise<SaveEntryResult>;
+    onExit: () => void;
 }
 
 type StartMode = "lastEntry" | "startOfDay" | "custom";
@@ -39,7 +41,7 @@ const fromTimeInputValue = (time: string, referenceDate: Date): Date => {
 const mruKey = (item: MostRecentlyUsedEntry): string => `${item.project.msdyn_projectid}|${item.task.msdyn_projecttaskid}`;
 
 const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
-    const { lastEntryEndsAt, startOfDayAt, mostRecentlyUsed, saveEntry } = props;
+    const { lastEntryEndsAt, startOfDayAt, mostRecentlyUsed, saveEntry, onExit } = props;
 
     const defaultStartMode: StartMode = lastEntryEndsAt ? "lastEntry" : "startOfDay";
     const [startMode, setStartMode] = useState<StartMode>(defaultStartMode);
@@ -55,7 +57,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
     const [customProjectId, setCustomProjectId] = useState<string | null>(null);
     const [tasks, setTasks] = useState<ProjectTask[] | null>(null);
     const [customTaskId, setCustomTaskId] = useState<string | null>(null);
-    const [qualifier, setQualifier] = useState<string>("");
+    const [qualifier, setQualifier] = useState<string>(mostRecentlyUsed.length > 0 ? mostRecentlyUsed[0].qualifier : "");
 
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [saving, setSaving] = useState<boolean>(false);
@@ -96,7 +98,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         setSelectedMruKey(mostRecentlyUsed.length > 0 ? mruKey(mostRecentlyUsed[0]) : null);
         setCustomProjectId(null);
         setCustomTaskId(null);
-        setQualifier("");
+        setQualifier(mostRecentlyUsed.length > 0 ? mostRecentlyUsed[0].qualifier : "");
         setErrorMessage(null);
     };
 
@@ -144,6 +146,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
             <div className="mb-4">
                 <h3 className="font-bold mb-1">Time</h3>
                 <div className="mb-2">
+                    <h4 className="font-semibold text-sm text-gray-600">Start</h4>
                     <label className="block">
                         <input type="radio" name="startMode" checked={startMode === "lastEntry"} disabled={!lastEntryEndsAt}
                             onChange={() => setStartMode("lastEntry")} />
@@ -163,6 +166,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                     </label>
                 </div>
                 <div>
+                    <h4 className="font-semibold text-sm text-gray-600">End</h4>
                     <label className="block">
                         <input type="radio" name="endMode" checked={endMode === "now"}
                             onChange={() => setEndMode("now")} />
@@ -197,8 +201,9 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                             return (
                                 <label className="block" key={key}>
                                     <input type="radio" name="mruEntry" checked={selectedMruKey === key}
-                                        onChange={() => setSelectedMruKey(key)} />
+                                        onChange={() => { setSelectedMruKey(key); setQualifier(item.qualifier); }} />
                                     {" "}{item.project.msdyn_subject} / {item.task.msdyn_subject}
+                                    {item.qualifier ? ` — ${item.qualifier}` : ""}
                                 </label>
                             );
                         })}
@@ -242,9 +247,13 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                     onClick={clearForm} disabled={saving}>
                     Clear
                 </button>
-                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
                     onClick={handleRecord} disabled={saving}>
                     Record
+                </button>
+                <button className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
+                    onClick={onExit} disabled={saving}>
+                    Exit
                 </button>
             </div>
         </VerticalContent>
