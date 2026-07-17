@@ -11,7 +11,7 @@ const renderRoot = () => {
 };
 
 const App = () => {
-    const [loggedInAccount, setLoggedInAccount ] = useState<LoggedInAccount>(null)
+    const [loggedInAccount, setLoggedInAccount ] = useState<LoggedInAccount | null>(null)
     useEffect(() => {
         // @ts-ignore
         window.mainProcess.onAuthenticated((loggedInUser: LoggedInAccount) => {

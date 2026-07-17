@@ -61,16 +61,21 @@ export function acquireTokenFactory(clientApp: msal.PublicClientApplication) {
 
 
     return function acquireToken(callback: OnTokenAcquiredCallback): void {
-        const callbackAndReturn = async (tokenRetriever: () => Promise<msal.AuthenticationResult>): Promise<void> => {
+        const callbackAndReturn = async (tokenRetriever: () => Promise<msal.AuthenticationResult | null>): Promise<void> => {
             const result = await tokenRetriever();
+            if (!result) {
+                console.log('Token acquisition returned no result');
+                return;
+            }
             callback(result.accessToken);
         };
         if (!account) {
             callbackAndReturn(() => getTokenInteractive(loginRequest));
             return;
         }
+        const currentAccount = account;
         try {
-            callbackAndReturn(() => clientApp.acquireTokenSilent({...loginRequest, account}));
+            callbackAndReturn(() => clientApp.acquireTokenSilent({...loginRequest, account: currentAccount}));
         } catch (error) {
             if (error instanceof msal.InteractionRequiredAuthError) {
                 console.log('Silent token acquisition failed, acquiring token interactive');
