@@ -16,11 +16,13 @@ declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
-const dynamicsApi = new MyDynamicsWebApi();
-const userService = new UserService(dynamicsApi);
-const projectService = new ProjectService(dynamicsApi);
 const recordedDataService = new RecordedDataService(app.getPath('userData'));
-const timeEntryService = new TimeEntryService(dynamicsApi);
+
+// Populated once the async bootstrap below completes, before app.whenReady() resolves and
+// before createWindow() can be called (either from the bootstrap itself or from 'activate').
+let userService: UserService;
+let projectService: ProjectService;
+let timeEntryService: TimeEntryService;
 
 const createWindow = async (): Promise<void> => {
   // Create the browser window.
@@ -68,6 +70,11 @@ app.on('activate', () => {
 
 
 (async () => {
+  const dynamicsApi = await MyDynamicsWebApi.create(app.getPath('userData'));
+  userService = new UserService(dynamicsApi);
+  projectService = new ProjectService(dynamicsApi);
+  timeEntryService = new TimeEntryService(dynamicsApi);
+
   await app.whenReady();
   ipcMain.handle('get-all-projects', () => projectService.getAllProjects() )
   ipcMain.handle('get-tasks-for-project', (_, msdyn_projectid: string) => projectService.getTasksForProject(msdyn_projectid) )
