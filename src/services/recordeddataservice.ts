@@ -26,9 +26,21 @@ export class RecordedDataService {
     filePattern = new RegExp("\\d{4}-\\d{2}-\\d{2}.json");
     recordedData: Promise<Record<string, RecordedTimeEntry[]>>;
     recordedDataPath: string;
+    uploadedDaysPath: string;
+    uploadedDays: Promise<Set<string>>;
 
     constructor(private dataPath: string) {
         this.recordedDataPath = `${this.dataPath}/recorded`;
+        this.uploadedDaysPath = `${this.dataPath}/uploaded-days.json`;
+        this.uploadedDays = readFile(this.uploadedDaysPath, 'utf-8').then(
+            (data) => new Set(JSON.parse(data) as string[]),
+            (err) => {
+                if (err.code === 'ENOENT') {
+                    return new Set<string>();
+                }
+                throw err;
+            }
+        );
         this.recordedData = mkdir(this.recordedDataPath, { recursive: true }).then(() => {
             return readdir(this.recordedDataPath).then((files: string[]) => {
                 return Promise.all(files.filter(file => this.filePattern.test(file)).map(file => {
@@ -56,5 +68,16 @@ export class RecordedDataService {
         allData[date] = entries;
         this.recordedData = Promise.resolve(allData);
         await writeFile(`${this.recordedDataPath}/${date}.json`, JSON.stringify(entries), {encoding: 'utf-8'});
+    }
+
+    public async getUploadedDays(): Promise<string[]> {
+        return Array.from(await this.uploadedDays);
+    }
+
+    public async markDayUploaded(date: string): Promise<void> {
+        const days = await this.uploadedDays;
+        days.add(date);
+        this.uploadedDays = Promise.resolve(days);
+        await writeFile(this.uploadedDaysPath, JSON.stringify(Array.from(days)), {encoding: 'utf-8'});
     }
 }

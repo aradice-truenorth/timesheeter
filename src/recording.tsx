@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { RecordedTimeEntry, WorkTimeEntry } from "./services/recordeddataservice";
 import Loading from "./loading";
 import RecordEntry, { MostRecentlyUsedEntry, SaveEntryResult } from "./recordentry";
+import VerticalContent from "./verticalcontent";
 
 const START_OF_DAY = "08:00";
 const MAX_MOST_RECENTLY_USED = 10;
@@ -73,10 +74,14 @@ const Recording: React.FunctionComponent<RecordingProps> = ({ onExit }) => {
     const today = new Date().toISOString().substring(0, 10);
     const [recordedData, setRecordedData] = useState<RecordedTimeEntry[] | null>(null);
     const [mostRecentlyUsed, setMostRecentlyUsed] = useState<MostRecentlyUsedEntry[]>([]);
+    const [dayAlreadyUploaded, setDayAlreadyUploaded] = useState<boolean | null>(null);
     useEffect(() => {
         window.mainProcess.getAllRecordedData().then((allData) => {
             setRecordedData(allData[today] || []);
             setMostRecentlyUsed(computeMostRecentlyUsed(allData));
+        });
+        window.mainProcess.getUploadedDays().then((uploadedDays) => {
+            setDayAlreadyUploaded(uploadedDays.indexOf(today) !== -1);
         });
     }, [today]);
     const validateEntry = async (newEntry: RecordedTimeEntry): Promise<SaveEntryResult> => {
@@ -106,8 +111,23 @@ const Recording: React.FunctionComponent<RecordingProps> = ({ onExit }) => {
         return {success: true};
     };
 
+    if (!recordedData || dayAlreadyUploaded === null) {
+        return <Loading />;
+    }
+
+    if (dayAlreadyUploaded) {
+        return (
+            <VerticalContent>
+                <p className="mb-4">Today's time has already been uploaded and can no longer be recorded against.</p>
+                <button className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded" onClick={onExit}>
+                    Exit
+                </button>
+            </VerticalContent>
+        );
+    }
+
     return (
-        !recordedData ? <Loading /> : <RecordEntry
+        <RecordEntry
             lastEntryEndsAt={recordedData.length > 0 ? recordedData[recordedData.length - 1].endsAt : null}
             startOfDayAt={getStartOfDay()}
             mostRecentlyUsed={mostRecentlyUsed}

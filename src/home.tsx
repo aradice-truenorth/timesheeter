@@ -16,7 +16,7 @@ const Home = () => {
         case HomeScreenState.Recording:
             return <Recording onExit={() => setHomeScreenState(HomeScreenState.Home)} />
         case HomeScreenState.Editing:
-            return <EditingDaysList />;
+            return <EditingDaysList onExit={() => setHomeScreenState(HomeScreenState.Home)} />;
         default:
             return (
                 <VerticalContent>
