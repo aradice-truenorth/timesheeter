@@ -43,9 +43,6 @@ const createWindow = async (): Promise<void> => {
     console.log(err);
     app.quit();
   });
-
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
 };
 
 // Quit when all windows are closed, except on macOS. There, it's common
