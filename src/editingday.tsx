@@ -97,15 +97,15 @@ const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, on
                                     <input type="text" className="border rounded px-2 py-1 w-full disabled:bg-gray-100 disabled:text-gray-400"
                                         value={row.qualifier} onChange={(e) => updateQualifier(index, e.target.value)} disabled={uploading} />
                                 </td>
-                                <td>
+                                <td className="whitespace-nowrap">
                                     <button className="bg-gray-300 hover:bg-gray-400 text-gray-800 rounded px-2"
                                         onClick={() => adjustRow(index, -ADJUSTMENT_MINUTES)} disabled={uploading}>
-                                        -15
+                                        -
                                     </button>
                                     {" "}{formatDuration(row.minutes)}{" "}
                                     <button className="bg-gray-300 hover:bg-gray-400 text-gray-800 rounded px-2"
                                         onClick={() => adjustRow(index, ADJUSTMENT_MINUTES)} disabled={uploading}>
-                                        +15
+                                        +
                                     </button>
                                 </td>
                             </tr>

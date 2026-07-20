@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Project, ProjectTask } from "./services/projectservice";
 import { RecordedTimeEntry } from "./services/recordeddataservice";
 import ComboBox from "./combobox";
@@ -19,6 +19,7 @@ export interface RecordEntryProps {
     lastEntryEndsAt: Date | null;
     startOfDayAt: Date;
     mostRecentlyUsed: MostRecentlyUsedEntry[];
+    totalMinutesToday: number;
     saveEntry: (entry: RecordedTimeEntry) => Promise<SaveEntryResult>;
     onExit: () => void;
 }
@@ -40,8 +41,13 @@ const fromTimeInputValue = (time: string, referenceDate: Date): Date => {
 
 const mruKey = (item: MostRecentlyUsedEntry): string => `${item.project.msdyn_projectid}|${item.task.msdyn_projecttaskid}|${item.qualifier}`;
 
+const formatDuration = (totalMinutes: number): string => {
+    const rounded = Math.round(totalMinutes);
+    return `${Math.floor(rounded / 60)}h ${rounded % 60}m`;
+};
+
 const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
-    const { lastEntryEndsAt, startOfDayAt, mostRecentlyUsed, saveEntry, onExit } = props;
+    const { lastEntryEndsAt, startOfDayAt, mostRecentlyUsed, totalMinutesToday, saveEntry, onExit } = props;
 
     const defaultStartMode: StartMode = lastEntryEndsAt ? "lastEntry" : "startOfDay";
     const [startMode, setStartMode] = useState<StartMode>(defaultStartMode);
@@ -61,6 +67,20 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
 
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [saving, setSaving] = useState<boolean>(false);
+
+    const splitRadioRef = useRef<HTMLInputElement>(null);
+    const mruRadioRef = useRef<HTMLInputElement>(null);
+    const customRadioRef = useRef<HTMLInputElement>(null);
+
+    const focusWorkModeRadio = (mode: WorkMode) => {
+        const ref = mode === "split" ? splitRadioRef : (mode === "mru" ? mruRadioRef : customRadioRef);
+        ref.current?.focus();
+    };
+
+    useEffect(() => {
+        // Only on initial mount - the target radio here is deliberately the mount-time default.
+        focusWorkModeRadio(defaultWorkMode);
+    }, []);
 
     useEffect(() => {
         window.mainProcess.getAllProjects().then(setProjects);
@@ -136,6 +156,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         setSaving(false);
         if (result.success) {
             clearForm();
+            focusWorkModeRadio(defaultWorkMode);
         } else {
             setErrorMessage(result.errorMessage ?? "Failed to save entry.");
         }
@@ -149,6 +170,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
     return (
         <VerticalContent>
         <form onSubmit={handleSubmit}>
+            <div className="mb-4 font-semibold">Recorded today: {formatDuration(totalMinutesToday)}</div>
             <div className="mb-4">
                 <h3 className="font-bold mb-1">Time</h3>
                 <div className="mb-2">
@@ -191,12 +213,12 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
             <div className="mb-4">
                 <h3 className="font-bold mb-1">Work</h3>
                 <label className="block">
-                    <input type="radio" name="workMode" checked={workMode === "split"}
+                    <input type="radio" name="workMode" ref={splitRadioRef} checked={workMode === "split"}
                         onChange={() => setWorkMode("split")} />
                     {" "}Split (shared out across today's other entries when reviewed)
                 </label>
                 <label className="block">
-                    <input type="radio" name="workMode" checked={workMode === "mru"} disabled={mostRecentlyUsed.length === 0}
+                    <input type="radio" name="workMode" ref={mruRadioRef} checked={workMode === "mru"} disabled={mostRecentlyUsed.length === 0}
                         onChange={() => setWorkMode("mru")} />
                     {" "}Recent
                 </label>
@@ -216,7 +238,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                     </div>
                 )}
                 <label className="block">
-                    <input type="radio" name="workMode" checked={workMode === "custom"}
+                    <input type="radio" name="workMode" ref={customRadioRef} checked={workMode === "custom"}
                         onChange={() => setWorkMode("custom")} />
                     {" "}Custom
                 </label>

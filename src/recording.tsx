@@ -126,11 +126,14 @@ const Recording: React.FunctionComponent<RecordingProps> = ({ onExit }) => {
         );
     }
 
+    const totalMinutesToday = recordedData.reduce((sum, entry) => sum + (entry.endsAt.getTime() - entry.startsAt.getTime()) / 60000, 0);
+
     return (
         <RecordEntry
             lastEntryEndsAt={recordedData.length > 0 ? recordedData[recordedData.length - 1].endsAt : null}
             startOfDayAt={getStartOfDay()}
             mostRecentlyUsed={mostRecentlyUsed}
+            totalMinutesToday={totalMinutesToday}
             saveEntry={validateEntry}
             onExit={onExit} />
     );

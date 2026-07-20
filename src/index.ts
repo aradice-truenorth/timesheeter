@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain } from 'electron';
 import { LoggedInAccount } from './ipctypes';
 import { MyDynamicsWebApi } from './auth/dynamicswebapiconnection';
 import { UserService } from './services/userservice';
@@ -24,6 +24,10 @@ let userService: UserService;
 let projectService: ProjectService;
 let timeEntryService: TimeEntryService;
 
+// Tracked so the global "activate window" shortcut can reach it regardless of which function
+// created the window (initial launch vs 'activate').
+let activeWindow: BrowserWindow | null = null;
+
 const createWindow = async (): Promise<void> => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -32,6 +36,12 @@ const createWindow = async (): Promise<void> => {
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
+  });
+  activeWindow = mainWindow;
+  mainWindow.on('closed', () => {
+    if (activeWindow === mainWindow) {
+      activeWindow = null;
+    }
   });
 
   // and load the index.html of the app.
@@ -62,6 +72,10 @@ app.on('activate', () => {
   }
 });
 
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+});
+
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
 
@@ -83,6 +97,21 @@ app.on('activate', () => {
     await timeEntryService.uploadDayEntries(date, entries);
     await recordedDataService.markDayUploaded(date);
   })
+
+  const shortcutRegistered = globalShortcut.register('Super+Ctrl+T', () => {
+    if (!activeWindow) {
+      return;
+    }
+    if (activeWindow.isMinimized()) {
+      activeWindow.restore();
+    }
+    activeWindow.show();
+    activeWindow.focus();
+  });
+  if (!shortcutRegistered) {
+    console.log('Could not register the Super+Ctrl+T global shortcut - it may already be in use by another application.');
+  }
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
