@@ -73,7 +73,7 @@ app.on('activate', () => {
   const dynamicsApi = await MyDynamicsWebApi.create(app.getPath('userData'));
   userService = new UserService(dynamicsApi);
   projectService = new ProjectService(dynamicsApi);
-  timeEntryService = new TimeEntryService(dynamicsApi);
+  timeEntryService = new TimeEntryService(dynamicsApi, userService);
 
   await app.whenReady();
   ipcMain.handle('get-all-projects', () => projectService.getAllProjects() )
