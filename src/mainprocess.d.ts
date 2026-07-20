@@ -5,6 +5,7 @@ import { ProcessedDayEntry } from './dayentryprocessing';
 
 export interface IMainProcessAPI {
   onAuthenticated: (callback: (loggedInUser: LoggedInAccount) => void) => void,
+  getLoggedInUser(): Promise<LoggedInAccount>,
   getAllProjects(): Promise<Project[]>,
   getTasksForProject(msdyn_projectid: string): Promise<ProjectTask[]>
   getAllRecordedData(): Promise<Record<string, RecordedTimeEntry[]>>,

@@ -73,6 +73,7 @@ app.on('activate', () => {
   timeEntryService = new TimeEntryService(dynamicsApi, userService);
 
   await app.whenReady();
+  ipcMain.handle('get-logged-in-user', () => userService.getLoggedInUser() )
   ipcMain.handle('get-all-projects', () => projectService.getAllProjects() )
   ipcMain.handle('get-tasks-for-project', (_, msdyn_projectid: string) => projectService.getTasksForProject(msdyn_projectid) )
   ipcMain.handle('get-all-recorded-data', () => recordedDataService.getAll() )

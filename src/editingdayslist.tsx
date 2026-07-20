@@ -7,9 +7,12 @@ export interface EditingDaysListProps {
     onExit: () => void;
 }
 
+const SUCCESS_BANNER_TIMEOUT_MS = 5000;
+
 const EditingDaysList: React.FunctionComponent<EditingDaysListProps> = ({ onExit }) => {
     const [availableDays, setAvailableDays] = useState<string[] | null>(null);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const loadDays = () => {
         setAvailableDays(null);
@@ -26,8 +29,18 @@ const EditingDaysList: React.FunctionComponent<EditingDaysListProps> = ({ onExit
         loadDays();
     }, []);
 
+    useEffect(() => {
+        if (!successMessage) {
+            return;
+        }
+        const timer = setTimeout(() => setSuccessMessage(null), SUCCESS_BANNER_TIMEOUT_MS);
+        return () => clearTimeout(timer);
+    }, [successMessage]);
+
     if (selectedDate) {
-        return <EditingDay date={selectedDate} onExit={() => { setSelectedDate(null); loadDays(); }} />;
+        return <EditingDay date={selectedDate}
+            onExit={() => { setSelectedDate(null); loadDays(); }}
+            onUploaded={() => { setSelectedDate(null); loadDays(); setSuccessMessage("Time entries uploaded successfully."); }} />;
     }
 
     if (!availableDays) {
@@ -36,6 +49,7 @@ const EditingDaysList: React.FunctionComponent<EditingDaysListProps> = ({ onExit
 
     return (
         <VerticalContent>
+            {successMessage && <div className="bg-green-100 text-green-800 border border-green-300 rounded px-4 py-2 mb-4">{successMessage}</div>}
             {availableDays.length === 0
                 ? <p className="mb-4">No days available to edit.</p>
                 : availableDays.map(date => (
