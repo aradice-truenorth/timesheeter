@@ -59,7 +59,7 @@ const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, on
         setUploading(true);
         setError(null);
         try {
-            await window.mainProcess.uploadDayEntries(date, rows);
+            await window.mainProcess.uploadDayEntries(date, rows.filter(r => r.minutes > 0));
             onUploaded();
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to upload time entries.");
