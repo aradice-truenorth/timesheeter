@@ -223,19 +223,32 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                     {" "}Recent
                 </label>
                 {workMode === "mru" && (
-                    <div className="ml-6 mb-2">
-                        {mostRecentlyUsed.map((item) => {
-                            const key = mruKey(item);
-                            return (
-                                <label className="block" key={key}>
-                                    <input type="radio" name="mruEntry" checked={selectedMruKey === key}
-                                        onChange={() => { setSelectedMruKey(key); setQualifier(item.qualifier); }} />
-                                    {" "}{item.project.msdyn_subject} / {item.task.msdyn_subject}
-                                    {item.qualifier ? ` — ${item.qualifier}` : ""}
-                                </label>
-                            );
-                        })}
-                    </div>
+                    <table className="ml-6 mb-2">
+                        <thead>
+                            <tr className="text-left">
+                                <th></th>
+                                <th className="pr-4">Project</th>
+                                <th className="pr-4">Task</th>
+                                <th>Qualifier</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {mostRecentlyUsed.map((item) => {
+                                const key = mruKey(item);
+                                const selectItem = () => { setSelectedMruKey(key); setQualifier(item.qualifier); };
+                                return (
+                                    <tr key={key} className="cursor-pointer hover:bg-gray-100" onClick={selectItem}>
+                                        <td>
+                                            <input type="radio" name="mruEntry" checked={selectedMruKey === key} onChange={selectItem} />
+                                        </td>
+                                        <td className="pr-4">{item.project.msdyn_subject}</td>
+                                        <td className="pr-4">{item.task.msdyn_subject}</td>
+                                        <td>{item.qualifier}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 )}
                 <label className="block">
                     <input type="radio" name="workMode" ref={customRadioRef} checked={workMode === "custom"}
