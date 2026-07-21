@@ -6,6 +6,10 @@ export interface ProcessedDayEntry {
     task: ProjectTask;
     qualifier: string;
     minutes: number;
+    // The exact time actually recorded for this project/task/qualifier, before "split" time was
+    // allocated across it and before rounding to the nearest 15 minutes. Never changed after
+    // grouping - purely a reference value for display.
+    loggedMinutes: number;
 }
 
 const ROUNDING_INCREMENT_MINUTES = 15;
@@ -32,8 +36,9 @@ export const processDayEntries = (entries: RecordedTimeEntry[]): ProcessedDayEnt
         const existing = groups.get(key);
         if (existing) {
             existing.minutes += minutes;
+            existing.loggedMinutes += minutes;
         } else {
-            groups.set(key, { project: entry.project, task: entry.task, qualifier: entry.qualifier, minutes });
+            groups.set(key, { project: entry.project, task: entry.task, qualifier: entry.qualifier, minutes, loggedMinutes: minutes });
         }
     }
 
