@@ -11,7 +11,10 @@ export interface EditingDayProps {
 
 const ADJUSTMENT_MINUTES = 15;
 
-const formatDuration = (minutes: number): string => `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+const formatDuration = (totalMinutes: number): string => {
+    const rounded = Math.round(totalMinutes);
+    return `${Math.floor(rounded / 60)}h ${rounded % 60}m`;
+};
 
 const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, onUploaded }) => {
     const [rows, setRows] = useState<ProcessedDayEntry[] | null>(null);
@@ -110,6 +113,7 @@ const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, on
     const totalMinutes = rows.reduce((sum, row) => sum + row.minutes, 0);
 
     return (
+        <div className="w-screen ml-[calc(50%-50vw)] px-8">
         <VerticalContent>
         <form onSubmit={handleSubmit}>
             <h3 className="font-bold mb-2">{date}</h3>
@@ -174,6 +178,7 @@ const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, on
             </div>
         </form>
         </VerticalContent>
+        </div>
     );
 };
 export default EditingDay;
