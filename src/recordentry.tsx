@@ -83,6 +83,15 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
     }, []);
 
     useEffect(() => {
+        // Reacts to the actual (fresh) prop rather than the value clearForm() closed over when
+        // the save that produced it was still in flight, so this is correct even for the very
+        // first entry of the day (where clearForm() only sees "no last entry yet").
+        if (lastEntryEndsAt) {
+            setStartMode("lastEntry");
+        }
+    }, [lastEntryEndsAt]);
+
+    useEffect(() => {
         window.mainProcess.getAllProjects().then(setProjects);
     }, []);
 
@@ -180,11 +189,13 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                             onChange={() => setStartMode("lastEntry")} />
                         {" "}End of last entry{lastEntryEndsAt ? ` (${toTimeInputValue(lastEntryEndsAt)})` : " (none yet)"}
                     </label>
-                    <label className="block">
-                        <input type="radio" name="startMode" checked={startMode === "startOfDay"}
-                            onChange={() => setStartMode("startOfDay")} />
-                        {" "}Start of day ({toTimeInputValue(startOfDayAt)})
-                    </label>
+                    {!lastEntryEndsAt && (
+                        <label className="block">
+                            <input type="radio" name="startMode" checked={startMode === "startOfDay"}
+                                onChange={() => setStartMode("startOfDay")} />
+                            {" "}Start of day ({toTimeInputValue(startOfDayAt)})
+                        </label>
+                    )}
                     <label className="block">
                         <input type="radio" name="startMode" checked={startMode === "custom"}
                             onChange={() => setStartMode("custom")} />
