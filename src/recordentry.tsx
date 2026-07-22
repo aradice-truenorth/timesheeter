@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Project, ProjectTask } from "./services/projectservice";
 import { RecordedTimeEntry } from "./services/recordeddataservice";
 import ComboBox from "./combobox";
+import FullWidthContent from "./fullwidthcontent";
+import { useEscapeKey } from "./useescapekey";
 import VerticalContent from "./verticalcontent";
 
 export interface SaveEntryResult {
@@ -67,6 +69,8 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
 
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [saving, setSaving] = useState<boolean>(false);
+
+    useEscapeKey(onExit, !saving);
 
     const splitRadioRef = useRef<HTMLInputElement>(null);
     const mruRadioRef = useRef<HTMLInputElement>(null);
@@ -177,6 +181,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
     };
 
     return (
+        <FullWidthContent>
         <VerticalContent>
         <form onSubmit={handleSubmit}>
             <div className="mb-4 font-semibold">Recorded today: {formatDuration(totalMinutesToday)}</div>
@@ -310,6 +315,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
             </div>
         </form>
         </VerticalContent>
+        </FullWidthContent>
     );
 };
 export default RecordEntry;

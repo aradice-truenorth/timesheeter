@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import EditingDay from "./editingday";
 import Loading from "./loading";
+import { useEscapeKey } from "./useescapekey";
 import VerticalContent from "./verticalcontent";
 
 export interface EditingDaysListProps {
@@ -36,6 +37,10 @@ const EditingDaysList: React.FunctionComponent<EditingDaysListProps> = ({ onExit
         const timer = setTimeout(() => setSuccessMessage(null), SUCCESS_BANNER_TIMEOUT_MS);
         return () => clearTimeout(timer);
     }, [successMessage]);
+
+    // Only handles Escape for this screen's own "list" view - when a day is selected, EditingDay
+    // is rendered instead and owns Escape itself (returning to this list, not past it).
+    useEscapeKey(onExit, !selectedDate);
 
     if (selectedDate) {
         return <EditingDay date={selectedDate}

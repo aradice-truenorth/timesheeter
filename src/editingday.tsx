@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { processDayEntries, ProcessedDayEntry } from "./dayentryprocessing";
+import FullWidthContent from "./fullwidthcontent";
 import Loading from "./loading";
+import { useEscapeKey } from "./useescapekey";
 import VerticalContent from "./verticalcontent";
 
 export interface EditingDayProps {
@@ -86,6 +88,8 @@ const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, on
         }
     };
 
+    useEscapeKey(handleExit, !uploading);
+
     const handleUpload = async () => {
         if (!rows) {
             return;
@@ -113,7 +117,7 @@ const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, on
     const totalMinutes = rows.reduce((sum, row) => sum + row.minutes, 0);
 
     return (
-        <div className="w-screen ml-[calc(50%-50vw)] px-8">
+        <FullWidthContent>
         <VerticalContent>
         <form onSubmit={handleSubmit}>
             <h3 className="font-bold mb-2">{date}</h3>
@@ -178,7 +182,7 @@ const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, on
             </div>
         </form>
         </VerticalContent>
-        </div>
+        </FullWidthContent>
     );
 };
 export default EditingDay;

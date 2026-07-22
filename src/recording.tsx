@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { RecordedTimeEntry, WorkTimeEntry } from "./services/recordeddataservice";
 import Loading from "./loading";
 import RecordEntry, { MostRecentlyUsedEntry, SaveEntryResult } from "./recordentry";
+import { useEscapeKey } from "./useescapekey";
 import VerticalContent from "./verticalcontent";
 
 const START_OF_DAY = "08:00";
@@ -110,6 +111,10 @@ const Recording: React.FunctionComponent<RecordingProps> = ({ onExit }) => {
         }
         return {success: true};
     };
+
+    // Only handles Escape for the "already uploaded" dead-end below - RecordEntry receives this
+    // same onExit and owns Escape itself in the normal (not-yet-uploaded) case.
+    useEscapeKey(onExit, dayAlreadyUploaded === true);
 
     if (!recordedData || dayAlreadyUploaded === null) {
         return <Loading />;
