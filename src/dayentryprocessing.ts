@@ -77,5 +77,13 @@ export const processDayEntries = (entries: RecordedTimeEntry[]): ProcessedDayEnt
         }
     }
 
+    // Sorted once here rather than by the caller, so that later in-place edits (e.g. to the
+    // qualifier) don't trigger a re-sort and shuffle rows out from under the user.
+    rows.sort((a, b) =>
+        a.project.msdyn_subject.localeCompare(b.project.msdyn_subject) ||
+        a.task.msdyn_subject.localeCompare(b.task.msdyn_subject) ||
+        a.qualifier.localeCompare(b.qualifier)
+    );
+
     return rows;
 };

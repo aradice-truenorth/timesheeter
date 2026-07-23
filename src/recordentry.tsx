@@ -64,6 +64,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
     const [projects, setProjects] = useState<Project[] | null>(null);
     const [customProjectId, setCustomProjectId] = useState<string | null>(null);
     const [tasks, setTasks] = useState<ProjectTask[] | null>(null);
+    const [tasksReloading, setTasksReloading] = useState<boolean>(false);
     const [customTaskId, setCustomTaskId] = useState<string | null>(null);
     const [qualifier, setQualifier] = useState<string>(mostRecentlyUsed.length > 0 ? mostRecentlyUsed[0].qualifier : "");
 
@@ -109,6 +110,17 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         setCustomTaskId(null);
         window.mainProcess.getTasksForProject(customProjectId).then(setTasks);
     }, [customProjectId]);
+
+    const reloadTasks = () => {
+        if (!customProjectId) {
+            return;
+        }
+        setTasksReloading(true);
+        window.mainProcess.getTasksForProject(customProjectId).then((reloaded) => {
+            setTasks(reloaded);
+            setTasksReloading(false);
+        });
+    };
 
     const resolveStart = (): Date => {
         if (startMode === "lastEntry") {
@@ -287,7 +299,9 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                                 value={customTaskId}
                                 onChange={setCustomTaskId}
                                 placeholder={!customProjectId ? "Select a project first" : (tasks ? "Select a task..." : "Loading tasks...")}
-                                disabled={!customProjectId || !tasks} />
+                                disabled={!customProjectId || !tasks}
+                                onReload={customProjectId ? reloadTasks : undefined}
+                                reloading={tasksReloading} />
                         </div>
                     </div>
                 )}
