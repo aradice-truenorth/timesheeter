@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Project, ProjectTask } from "./services/projectservice";
 import { RecordedTimeEntry } from "./services/recordeddataservice";
 import ComboBox from "./combobox";
+import QualifierInput from "./qualifierinput";
 import FullWidthContent from "./fullwidthcontent";
 import { useEscapeKey } from "./useescapekey";
 import VerticalContent from "./verticalcontent";
+
+const SUCCESS_BANNER_TIMEOUT_MS = 1000;
 
 export interface SaveEntryResult {
     success: boolean;
@@ -17,10 +20,17 @@ export interface MostRecentlyUsedEntry {
     qualifier: string;
 }
 
+export interface RecentQualifierUsage {
+    projectId: string;
+    taskId: string;
+    qualifier: string;
+}
+
 export interface RecordEntryProps {
     lastEntryEndsAt: Date | null;
     startOfDayAt: Date;
     mostRecentlyUsed: MostRecentlyUsedEntry[];
+    recentQualifierUsage: RecentQualifierUsage[];
     totalMinutesToday: number;
     saveEntry: (entry: RecordedTimeEntry) => Promise<SaveEntryResult>;
     onExit: () => void;
@@ -49,7 +59,7 @@ const formatDuration = (totalMinutes: number): string => {
 };
 
 const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
-    const { lastEntryEndsAt, startOfDayAt, mostRecentlyUsed, totalMinutesToday, saveEntry, onExit } = props;
+    const { lastEntryEndsAt, startOfDayAt, mostRecentlyUsed, recentQualifierUsage, totalMinutesToday, saveEntry, onExit } = props;
 
     const defaultStartMode: StartMode = lastEntryEndsAt ? "lastEntry" : "startOfDay";
     const [startMode, setStartMode] = useState<StartMode>(defaultStartMode);
@@ -69,9 +79,37 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
     const [qualifier, setQualifier] = useState<string>(mostRecentlyUsed.length > 0 ? mostRecentlyUsed[0].qualifier : "");
 
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [saving, setSaving] = useState<boolean>(false);
 
     useEscapeKey(onExit, !saving);
+
+    const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => {
+        if (successTimeoutRef.current) {
+            clearTimeout(successTimeoutRef.current);
+        }
+    }, []);
+
+    const selectedMru = workMode === "mru" ? mostRecentlyUsed.find(item => mruKey(item) === selectedMruKey) : undefined;
+    const selectedProjectId = workMode === "custom" ? customProjectId : (selectedMru ? selectedMru.project.msdyn_projectid : null);
+    const selectedTaskId = workMode === "custom" ? customTaskId : (selectedMru ? selectedMru.task.msdyn_projecttaskid : null);
+
+    const qualifierSuggestions = useMemo(() => {
+        if (!selectedProjectId || !selectedTaskId) {
+            return [];
+        }
+        const seen = new Set<string>();
+        const suggestions: string[] = [];
+        for (const usage of recentQualifierUsage) {
+            if (usage.projectId !== selectedProjectId || usage.taskId !== selectedTaskId || !usage.qualifier || seen.has(usage.qualifier)) {
+                continue;
+            }
+            seen.add(usage.qualifier);
+            suggestions.push(usage.qualifier);
+        }
+        return suggestions;
+    }, [recentQualifierUsage, selectedProjectId, selectedTaskId]);
 
     const splitRadioRef = useRef<HTMLInputElement>(null);
     const mruRadioRef = useRef<HTMLInputElement>(null);
@@ -181,7 +219,13 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         setSaving(false);
         if (result.success) {
             clearForm();
+            setQualifier("");
             focusWorkModeRadio(defaultWorkMode);
+            setSuccessMessage("Entry recorded.");
+            if (successTimeoutRef.current) {
+                clearTimeout(successTimeoutRef.current);
+            }
+            successTimeoutRef.current = setTimeout(() => setSuccessMessage(null), SUCCESS_BANNER_TIMEOUT_MS);
         } else {
             setErrorMessage(result.errorMessage ?? "Failed to save entry.");
         }
@@ -196,6 +240,11 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         <FullWidthContent>
         <VerticalContent>
         <form onSubmit={handleSubmit}>
+            {successMessage && (
+                <div className="mb-4 bg-green-100 text-green-800 border border-green-300 rounded px-3 py-2">
+                    {successMessage}
+                </div>
+            )}
             <div className="mb-4 font-semibold">Recorded today: {formatDuration(totalMinutesToday)}</div>
             <div className="mb-4">
                 <h3 className="font-bold mb-1">Time</h3>
@@ -306,8 +355,11 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                     </div>
                 )}
                 {workMode !== "split" && (
-                    <input type="text" className="border rounded px-2 py-1 w-full mt-1" placeholder="Qualifier (optional)"
-                        value={qualifier} onChange={(e) => setQualifier(e.target.value)} />
+                    <QualifierInput
+                        value={qualifier}
+                        onChange={setQualifier}
+                        suggestions={qualifierSuggestions}
+                        placeholder="Qualifier (optional)" />
                 )}
             </div>
 

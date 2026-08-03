@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, Menu } from 'electron';
 import { LoggedInAccount } from './ipctypes';
 import { MyDynamicsWebApi } from './auth/dynamicswebapiconnection';
 import { UserService } from './services/userservice';
@@ -16,6 +16,7 @@ declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
+Menu.setApplicationMenu(null);
 const recordedDataService = new RecordedDataService(app.getPath('userData'));
 
 // Populated once the async bootstrap below completes, before app.whenReady() resolves and
