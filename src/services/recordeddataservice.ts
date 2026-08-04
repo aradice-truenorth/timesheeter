@@ -1,26 +1,51 @@
-import { readFile, mkdir, readdir, writeFile } from "fs/promises"; 
+import { readFile, mkdir, readdir, writeFile } from "fs/promises";
 import { Project, ProjectTask } from "./projectservice";
 
-export interface RecordedTimeEntry {
+export interface SplitTimeEntry {
     startsAt: Date;
     endsAt: Date;
+    isSplit: true;
+}
+
+export interface WorkTimeEntry {
+    startsAt: Date;
+    endsAt: Date;
+    isSplit: false;
     project: Project;
     task: ProjectTask;
     qualifier: string;
 }
 
+export type RecordedTimeEntry = SplitTimeEntry | WorkTimeEntry;
+
+const DATE_KEYS = new Set(["startsAt", "endsAt"]);
+const reviveDates = (key: string, value: unknown): unknown =>
+    (DATE_KEYS.has(key) && typeof value === "string") ? new Date(value) : value;
+
 export class RecordedDataService {
     filePattern = new RegExp("\\d{4}-\\d{2}-\\d{2}.json");
     recordedData: Promise<Record<string, RecordedTimeEntry[]>>;
     recordedDataPath: string;
+    uploadedDaysPath: string;
+    uploadedDays: Promise<Set<string>>;
 
     constructor(private dataPath: string) {
         this.recordedDataPath = `${this.dataPath}/recorded`;
+        this.uploadedDaysPath = `${this.dataPath}/uploaded-days.json`;
+        this.uploadedDays = readFile(this.uploadedDaysPath, 'utf-8').then(
+            (data) => new Set(JSON.parse(data) as string[]),
+            (err) => {
+                if (err.code === 'ENOENT') {
+                    return new Set<string>();
+                }
+                throw err;
+            }
+        );
         this.recordedData = mkdir(this.recordedDataPath, { recursive: true }).then(() => {
             return readdir(this.recordedDataPath).then((files: string[]) => {
                 return Promise.all(files.filter(file => this.filePattern.test(file)).map(file => {
                     return readFile(`${this.recordedDataPath}/${file}`, 'utf-8').then((data) => {
-                        return {name: file.substring(0, 10), entries: JSON.parse(data) as RecordedTimeEntry[]};
+                        return {name: file.substring(0, 10), entries: JSON.parse(data, reviveDates) as RecordedTimeEntry[]};
                     });
                 })).then((allData: {name: string, entries: RecordedTimeEntry[]}[]) => {
                     const rval = {} as Record<string, RecordedTimeEntry[]>;
@@ -43,5 +68,16 @@ export class RecordedDataService {
         allData[date] = entries;
         this.recordedData = Promise.resolve(allData);
         await writeFile(`${this.recordedDataPath}/${date}.json`, JSON.stringify(entries), {encoding: 'utf-8'});
+    }
+
+    public async getUploadedDays(): Promise<string[]> {
+        return Array.from(await this.uploadedDays);
+    }
+
+    public async markDayUploaded(date: string): Promise<void> {
+        const days = await this.uploadedDays;
+        days.add(date);
+        this.uploadedDays = Promise.resolve(days);
+        await writeFile(this.uploadedDaysPath, JSON.stringify(Array.from(days)), {encoding: 'utf-8'});
     }
 }
