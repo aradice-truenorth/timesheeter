@@ -21,7 +21,10 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
 
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [searchText, setSearchText] = useState<string>("");
-    const [highlightedIndex, setHighlightedIndex] = useState<number>(0);
+    // -1 means no option is explicitly highlighted yet - Enter only selects an option once the
+    // user has actually pressed ArrowDown/ArrowUp (or hovered), so an unmodified Enter falls
+    // through to the surrounding form instead of hijacking it.
+    const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Kept in sync with the selected option whenever the dropdown isn't actively being typed in,
@@ -53,7 +56,7 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
     const openDropdown = () => {
         setIsOpen(true);
         setSearchText("");
-        setHighlightedIndex(0);
+        setHighlightedIndex(-1);
     };
 
     const selectOption = (option: ComboBoxOption) => {
@@ -71,7 +74,7 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
             return;
         }
         if (!isOpen) {
-            if (e.key === "ArrowDown" || e.key === "Enter") {
+            if (e.key === "ArrowDown") {
                 e.preventDefault();
                 openDropdown();
             }
@@ -83,7 +86,7 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
         } else if (e.key === "ArrowUp") {
             e.preventDefault();
             setHighlightedIndex((current) => Math.max(current - 1, 0));
-        } else if (e.key === "Enter") {
+        } else if (e.key === "Enter" && highlightedIndex >= 0) {
             e.preventDefault();
             const option = filteredOptions[highlightedIndex];
             if (option) {
@@ -97,7 +100,7 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
             <div className="relative flex-1" ref={containerRef}>
                 <input
                     type="text"
-                    className="border rounded px-2 py-1 w-full disabled:bg-gray-100 disabled:text-gray-400"
+                    className="field w-full"
                     value={searchText}
                     placeholder={placeholder ?? "Select..."}
                     disabled={disabled}
@@ -105,19 +108,19 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
                     onChange={(e) => {
                         setIsOpen(true);
                         setSearchText(e.target.value);
-                        setHighlightedIndex(0);
+                        setHighlightedIndex(-1);
                     }}
                     onKeyDown={handleKeyDown}
                 />
                 {isOpen && (
-                    <ul className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-white border rounded shadow">
+                    <ul className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-surface border border-line-strong rounded-sm shadow-md text-sm">
                         {filteredOptions.length === 0 ? (
-                            <li className="px-2 py-1 text-gray-400">No matches</li>
+                            <li className="px-2.5 py-1.5 text-ink-soft">No matches</li>
                         ) : (
                             filteredOptions.map((option, index) => (
                                 <li
                                     key={option.value}
-                                    className={`px-2 py-1 cursor-pointer ${index === highlightedIndex ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}
+                                    className={`px-2.5 py-1.5 cursor-pointer ${index === highlightedIndex ? "bg-primary text-white" : "hover:bg-highlight"}`}
                                     onMouseDown={(e) => {
                                         e.preventDefault();
                                         selectOption(option);
@@ -135,7 +138,7 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
                 <button
                     type="button"
                     title="Reload from Dynamics"
-                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 rounded px-2 disabled:bg-gray-100 disabled:text-gray-400"
+                    className="btn-secondary"
                     onClick={onReload}
                     disabled={disabled || reloading}
                 >

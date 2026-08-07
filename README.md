@@ -10,6 +10,7 @@ On first launch, the app opens a browser tab for you to log in with your Dynamic
 
 Tips:
 
+* The overall philosophy is that you tell timesheeter *every time you change what you are doing*, however often that is. Before uploading the data to dynamics it will aggregate and round the entries.
 * Windows key + Ctrl + T brings the app window to the front from anywhere, even if it's minimized.
 * A lot of attention has been given to making the application work well with keyboard only: tab order is sensible, up and down cursor arrows generally do what you would expect them to, dropdowns are all searchable with up/down and enter to select the entry that you want.
 
@@ -33,7 +34,7 @@ Each time you record an entry you're filling in two things: a time range, and wh
 * **Split** — for time you can't attribute to one thing. Split time doesn't get a project/task of its own; instead, when you later review the day (see below), it gets divided proportionally across whatever real work you logged that day.
 
 Hit **Record** to save the entry (or **Clear** to reset the form). You can keep recording entries throughout the day — each new entry defaults to starting where the last one left off. **Exit** (or `Esc`) returns to the Home screen.
-There is **no undo**, and no easy way to see the entries you have already logged, other than to go to the **Edit and Upload Entries** screen.
+There is **no undo**, and no easy way to see the entries you have already logged, other than to run the PowerShell script (see *Data Storage* below) or go to the **Edit and Upload Entries** screen.
 
 Once a day has been uploaded to dynamics, you can no longer record new entries against it — the Recording screen will tell you if you try.
 
@@ -50,7 +51,9 @@ When the numbers look right, click **Upload to Dynamics** to submit the day's en
 
 ### Data storage
 
-Recorded entries are stored locally as JSON files (one per day) in the app's user data folder (%APPDATA%\\timesheeter\\recorded) — nothing is sent to Dynamics until you explicitly upload a day.
+Recorded entries are stored locally as JSON files (one per day) in the app's user data folder (%APPDATA%\\timesheeter\\recorded) — nothing is sent to Dynamics until you explicitly upload a day. To see a list of your entries for the most recently recorded day (which will normally be today) you can run the PowerShell script most-recent-day-timesheet.ps1
+
+
 
 ## For Developers
 

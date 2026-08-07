@@ -15,9 +15,10 @@ import { rendererConfig } from './webpack.renderer.config';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    icon: './assets/icon', // Forge appends the platform-specific extension (.ico on Windows)
   },
   rebuildConfig: {},
-  makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
+  makers: [new MakerSquirrel({ setupIcon: './assets/icon.ico' }), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
   publishers: [
     new PublisherGithub({
       repository: {

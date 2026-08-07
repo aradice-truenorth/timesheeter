@@ -203,7 +203,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                 setErrorMessage("Select a recent project/task.");
                 return;
             }
-            entry = { startsAt, endsAt, isSplit: false, project: selected.project, task: selected.task, qualifier };
+            entry = { startsAt, endsAt, isSplit: false, project: selected.project, task: selected.task, qualifier: selected.qualifier };
         } else {
             const project = (projects ?? []).find(p => p.msdyn_projectid === customProjectId);
             const task = (tasks ?? []).find(t => t.msdyn_projecttaskid === customTaskId);
@@ -241,71 +241,74 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         <VerticalContent>
         <form onSubmit={handleSubmit}>
             {successMessage && (
-                <div className="mb-4 bg-green-100 text-green-800 border border-green-300 rounded px-3 py-2">
+                <div className="mb-4 banner-success">
                     {successMessage}
                 </div>
             )}
-            <div className="mb-4 font-semibold">Recorded today: {formatDuration(totalMinutesToday)}</div>
-            <div className="mb-4">
-                <h3 className="font-bold mb-1">Time</h3>
-                <div className="mb-2">
-                    <h4 className="font-semibold text-sm text-gray-600">Start</h4>
-                    <label className="block">
-                        <input type="radio" name="startMode" checked={startMode === "lastEntry"} disabled={!lastEntryEndsAt}
+            <div className="mb-5 flex items-baseline justify-between border-b border-line pb-3">
+                <h2 className="text-lg font-semibold text-ink">Record Time</h2>
+                <span className="text-sm text-ink-soft">Recorded today: <span className="font-semibold text-ink">{formatDuration(totalMinutesToday)}</span></span>
+            </div>
+            <div className="mb-5">
+                <h3 className="section-label mb-2">Time</h3>
+                <div className="mb-3">
+                    <h4 className="text-xs font-medium text-ink-soft mb-1">Start</h4>
+                    <label className="radio-row">
+                        <input type="radio" className="accent-primary" name="startMode" checked={startMode === "lastEntry"} disabled={!lastEntryEndsAt}
                             onChange={() => setStartMode("lastEntry")} />
-                        {" "}End of last entry{lastEntryEndsAt ? ` (${toTimeInputValue(lastEntryEndsAt)})` : " (none yet)"}
+                        End of last entry{lastEntryEndsAt ? ` (${toTimeInputValue(lastEntryEndsAt)})` : " (none yet)"}
                     </label>
                     {!lastEntryEndsAt && (
-                        <label className="block">
-                            <input type="radio" name="startMode" checked={startMode === "startOfDay"}
+                        <label className="radio-row">
+                            <input type="radio" className="accent-primary" name="startMode" checked={startMode === "startOfDay"}
                                 onChange={() => setStartMode("startOfDay")} />
-                            {" "}Start of day ({toTimeInputValue(startOfDayAt)})
+                            Start of day ({toTimeInputValue(startOfDayAt)})
                         </label>
                     )}
-                    <label className="block">
-                        <input type="radio" name="startMode" checked={startMode === "custom"}
+                    <label className="radio-row">
+                        <input type="radio" className="accent-primary" name="startMode" checked={startMode === "custom"}
                             onChange={() => setStartMode("custom")} />
-                        {" "}Custom{" "}
-                        <input type="time" value={startCustomTime} disabled={startMode !== "custom"}
+                        Custom
+                        <input type="time" className="field w-auto" value={startCustomTime} disabled={startMode !== "custom"}
                             onChange={(e) => setStartCustomTime(e.target.value)} />
                     </label>
                 </div>
                 <div>
-                    <h4 className="font-semibold text-sm text-gray-600">End</h4>
-                    <label className="block">
-                        <input type="radio" name="endMode" checked={endMode === "now"}
+                    <h4 className="text-xs font-medium text-ink-soft mb-1">End</h4>
+                    <label className="radio-row">
+                        <input type="radio" className="accent-primary" name="endMode" checked={endMode === "now"}
                             onChange={() => setEndMode("now")} />
-                        {" "}Now
+                        Now
                     </label>
-                    <label className="block">
-                        <input type="radio" name="endMode" checked={endMode === "custom"}
+                    <label className="radio-row">
+                        <input type="radio" className="accent-primary" name="endMode" checked={endMode === "custom"}
                             onChange={() => setEndMode("custom")} />
-                        {" "}Custom{" "}
-                        <input type="time" value={endCustomTime} disabled={endMode !== "custom"}
+                        Custom
+                        <input type="time" className="field w-auto" value={endCustomTime} disabled={endMode !== "custom"}
                             onChange={(e) => setEndCustomTime(e.target.value)} />
                     </label>
                 </div>
             </div>
 
-            <div className="mb-4">
-                <h3 className="font-bold mb-1">Work</h3>
-                <label className="block">
-                    <input type="radio" name="workMode" ref={splitRadioRef} checked={workMode === "split"}
+            <div className="mb-5">
+                <h3 className="section-label mb-2">Work</h3>
+                <label className="radio-row">
+                    <input type="radio" className="accent-primary" name="workMode" ref={splitRadioRef} checked={workMode === "split"}
                         onChange={() => setWorkMode("split")} />
-                    {" "}Split (shared out across today's other entries when reviewed)
+                    Split (shared out across today's other entries when reviewed)
                 </label>
-                <label className="block">
-                    <input type="radio" name="workMode" ref={mruRadioRef} checked={workMode === "mru"} disabled={mostRecentlyUsed.length === 0}
+                <label className="radio-row">
+                    <input type="radio" className="accent-primary" name="workMode" ref={mruRadioRef} checked={workMode === "mru"} disabled={mostRecentlyUsed.length === 0}
                         onChange={() => setWorkMode("mru")} />
-                    {" "}Recent
+                    Recent
                 </label>
                 {workMode === "mru" && (
-                    <table className="ml-6 mb-2">
+                    <table className="table-fluent ml-6 mb-3 w-[calc(100%-1.5rem)]">
                         <thead>
-                            <tr className="text-left">
-                                <th></th>
-                                <th className="pr-4">Project</th>
-                                <th className="pr-4">Task</th>
+                            <tr>
+                                <th className="w-8"></th>
+                                <th>Project</th>
+                                <th>Task</th>
                                 <th>Qualifier</th>
                             </tr>
                         </thead>
@@ -314,12 +317,12 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                                 const key = mruKey(item);
                                 const selectItem = () => { setSelectedMruKey(key); setQualifier(item.qualifier); };
                                 return (
-                                    <tr key={key} className="cursor-pointer hover:bg-gray-100" onClick={selectItem}>
+                                    <tr key={key} className={`cursor-pointer ${selectedMruKey === key ? "bg-highlight" : ""}`} onClick={selectItem}>
                                         <td>
-                                            <input type="radio" name="mruEntry" checked={selectedMruKey === key} onChange={selectItem} />
+                                            <input type="radio" className="accent-primary" name="mruEntry" checked={selectedMruKey === key} onChange={selectItem} />
                                         </td>
-                                        <td className="pr-4">{item.project.msdyn_subject}</td>
-                                        <td className="pr-4">{item.task.msdyn_subject}</td>
+                                        <td>{item.project.msdyn_subject}</td>
+                                        <td>{item.task.msdyn_subject}</td>
                                         <td>{item.qualifier}</td>
                                     </tr>
                                 );
@@ -327,13 +330,13 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                         </tbody>
                     </table>
                 )}
-                <label className="block">
-                    <input type="radio" name="workMode" ref={customRadioRef} checked={workMode === "custom"}
+                <label className="radio-row">
+                    <input type="radio" className="accent-primary" name="workMode" ref={customRadioRef} checked={workMode === "custom"}
                         onChange={() => setWorkMode("custom")} />
-                    {" "}Custom
+                    Custom
                 </label>
                 {workMode === "custom" && (
-                    <div className="ml-6 mb-2">
+                    <div className="ml-6 mb-2 max-w-md">
                         <div className="mb-2">
                             <ComboBox
                                 options={(projects ?? []).map(p => ({ value: p.msdyn_projectid, label: p.msdyn_subject }))}
@@ -352,29 +355,27 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                                 onReload={customProjectId ? reloadTasks : undefined}
                                 reloading={tasksReloading} />
                         </div>
-                    </div>
-                )}
-                {workMode !== "split" && (
                     <QualifierInput
                         value={qualifier}
                         onChange={setQualifier}
                         suggestions={qualifierSuggestions}
                         placeholder="Qualifier (optional)" />
+                    </div>
                 )}
             </div>
 
-            {errorMessage && <div className="text-red-600 mb-2">{errorMessage}</div>}
+            {errorMessage && <div className="banner-error mb-3">{errorMessage}</div>}
 
-            <div>
-                <button type="button" className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded mr-2"
-                    onClick={clearForm} disabled={saving}>
-                    Clear
-                </button>
-                <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
+            <div className="flex gap-2 pt-3 border-t border-line">
+                <button type="submit" className="btn-primary"
                     disabled={saving}>
                     Record
                 </button>
-                <button type="button" className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
+                <button type="button" className="btn-secondary"
+                    onClick={clearForm} disabled={saving}>
+                    Clear
+                </button>
+                <button type="button" className="btn-secondary"
                     onClick={onExit} disabled={saving}>
                     Exit
                 </button>
