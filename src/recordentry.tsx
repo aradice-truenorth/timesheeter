@@ -303,7 +303,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                     Recent
                 </label>
                 {workMode === "mru" && (
-                    <table className="table-fluent ml-6 mb-3 max-w-xl">
+                    <table className="table-fluent ml-6 mb-3 w-[calc(100%-1.5rem)]">
                         <thead>
                             <tr>
                                 <th className="w-8"></th>

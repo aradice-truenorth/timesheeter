@@ -14,7 +14,10 @@ const QualifierInput: React.FunctionComponent<QualifierInputProps> = (props) => 
     const { value, onChange, suggestions, placeholder, disabled } = props;
 
     const [isOpen, setIsOpen] = useState<boolean>(false);
-    const [highlightedIndex, setHighlightedIndex] = useState<number>(0);
+    // -1 means no suggestion is explicitly highlighted yet - Enter only accepts a suggestion once
+    // the user has actually pressed ArrowDown/ArrowUp (or hovered), so an unmodified Enter falls
+    // through to the surrounding form instead of silently substituting the top match.
+    const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
     const containerRef = useRef<HTMLDivElement>(null);
 
     const filteredSuggestions = suggestions.filter((suggestion) =>
@@ -38,9 +41,9 @@ const QualifierInput: React.FunctionComponent<QualifierInputProps> = (props) => 
         setIsOpen(false);
     };
 
-    // Enter only ever intercepts to pick a highlighted suggestion; with the dropdown closed (the
-    // default until the user types or presses ArrowDown) it falls through so Enter still submits
-    // the form like a plain text field did.
+    // Enter only ever intercepts to pick an explicitly-highlighted suggestion (one reached via
+    // ArrowDown/ArrowUp or a mouse hover); with the dropdown closed, or open but nothing
+    // highlighted yet, it falls through so Enter still submits the form like a plain text field did.
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Escape" && isOpen) {
             e.preventDefault();
@@ -62,7 +65,7 @@ const QualifierInput: React.FunctionComponent<QualifierInputProps> = (props) => 
         } else if (e.key === "ArrowUp") {
             e.preventDefault();
             setHighlightedIndex((current) => Math.max(current - 1, 0));
-        } else if (e.key === "Enter") {
+        } else if (e.key === "Enter" && highlightedIndex >= 0) {
             const suggestion = filteredSuggestions[highlightedIndex];
             if (suggestion) {
                 e.preventDefault();
@@ -82,7 +85,7 @@ const QualifierInput: React.FunctionComponent<QualifierInputProps> = (props) => 
                 onChange={(e) => {
                     onChange(e.target.value);
                     setIsOpen(true);
-                    setHighlightedIndex(0);
+                    setHighlightedIndex(-1);
                 }}
                 onKeyDown={handleKeyDown}
             />

@@ -21,7 +21,10 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
 
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [searchText, setSearchText] = useState<string>("");
-    const [highlightedIndex, setHighlightedIndex] = useState<number>(0);
+    // -1 means no option is explicitly highlighted yet - Enter only selects an option once the
+    // user has actually pressed ArrowDown/ArrowUp (or hovered), so an unmodified Enter falls
+    // through to the surrounding form instead of hijacking it.
+    const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Kept in sync with the selected option whenever the dropdown isn't actively being typed in,
@@ -53,7 +56,7 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
     const openDropdown = () => {
         setIsOpen(true);
         setSearchText("");
-        setHighlightedIndex(0);
+        setHighlightedIndex(-1);
     };
 
     const selectOption = (option: ComboBoxOption) => {
@@ -71,7 +74,7 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
             return;
         }
         if (!isOpen) {
-            if (e.key === "ArrowDown" || e.key === "Enter") {
+            if (e.key === "ArrowDown") {
                 e.preventDefault();
                 openDropdown();
             }
@@ -83,7 +86,7 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
         } else if (e.key === "ArrowUp") {
             e.preventDefault();
             setHighlightedIndex((current) => Math.max(current - 1, 0));
-        } else if (e.key === "Enter") {
+        } else if (e.key === "Enter" && highlightedIndex >= 0) {
             e.preventDefault();
             const option = filteredOptions[highlightedIndex];
             if (option) {
@@ -105,7 +108,7 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
                     onChange={(e) => {
                         setIsOpen(true);
                         setSearchText(e.target.value);
-                        setHighlightedIndex(0);
+                        setHighlightedIndex(-1);
                     }}
                     onKeyDown={handleKeyDown}
                 />
