@@ -144,8 +144,8 @@ const Recording: React.FunctionComponent<RecordingProps> = ({ onExit }) => {
     if (dayAlreadyUploaded) {
         return (
             <VerticalContent>
-                <p className="mb-4">Today's time has already been uploaded and can no longer be recorded against.</p>
-                <button className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded" onClick={onExit}>
+                <p className="mb-4 text-sm text-ink">Today's time has already been uploaded and can no longer be recorded against.</p>
+                <button className="btn-secondary w-fit" onClick={onExit}>
                     Exit
                 </button>
             </VerticalContent>

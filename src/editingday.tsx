@@ -120,13 +120,16 @@ const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, on
         <FullWidthContent>
         <VerticalContent>
         <form onSubmit={handleSubmit}>
-            <h3 className="font-bold mb-2">{date}</h3>
+            <div className="mb-4 flex items-baseline justify-between border-b border-line pb-3">
+                <h2 className="text-lg font-semibold text-ink">{date}</h2>
+                <span className="text-sm text-ink-soft">Total: <span className="font-semibold text-ink">{formatDuration(totalMinutes)}</span></span>
+            </div>
             {rows.length === 0 ? (
-                <p className="mb-4">No entries recorded for this day.</p>
+                <p className="mb-4 text-sm text-ink-soft">No entries recorded for this day.</p>
             ) : (
-                <table className="mb-4 w-full" ref={tableRef}>
+                <table className="table-fluent mb-4" ref={tableRef}>
                     <thead>
-                        <tr className="text-left">
+                        <tr>
                             <th>Project</th>
                             <th>Task</th>
                             <th>Qualifier</th>
@@ -141,26 +144,28 @@ const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, on
                                 <td>{row.task.msdyn_subject}</td>
                                 <td>
                                     <input type="text" data-row={index} data-col="qualifier"
-                                        className="border rounded px-2 py-1 w-full disabled:bg-gray-100 disabled:text-gray-400"
+                                        className="field w-full"
                                         value={row.qualifier} onChange={(e) => updateQualifier(index, e.target.value)} disabled={uploading} />
                                 </td>
-                                <td className="whitespace-nowrap">{formatDuration(row.loggedMinutes)}</td>
+                                <td className="whitespace-nowrap text-ink-soft">{formatDuration(row.loggedMinutes)}</td>
                                 <td className="whitespace-nowrap">
-                                    <button type="button" data-row={index} data-col="minus"
-                                        className="bg-gray-300 hover:bg-gray-400 text-gray-800 rounded px-2"
-                                        onClick={() => adjustRow(index, -ADJUSTMENT_MINUTES)} disabled={uploading}>
-                                        -
-                                    </button>
-                                    {" "}{formatDuration(row.minutes)}{" "}
-                                    <button type="button" data-row={index} data-col="plus"
-                                        className="bg-gray-300 hover:bg-gray-400 text-gray-800 rounded px-2"
-                                        onClick={() => adjustRow(index, ADJUSTMENT_MINUTES)} disabled={uploading}>
-                                        +
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" data-row={index} data-col="minus"
+                                            className="btn-icon"
+                                            onClick={() => adjustRow(index, -ADJUSTMENT_MINUTES)} disabled={uploading}>
+                                            -
+                                        </button>
+                                        <span className="w-14 text-center">{formatDuration(row.minutes)}</span>
+                                        <button type="button" data-row={index} data-col="plus"
+                                            className="btn-icon"
+                                            onClick={() => adjustRow(index, ADJUSTMENT_MINUTES)} disabled={uploading}>
+                                            +
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
-                        <tr className="font-bold">
+                        <tr className="font-semibold">
                             <td colSpan={4}>Total</td>
                             <td>{formatDuration(totalMinutes)}</td>
                         </tr>
@@ -168,16 +173,16 @@ const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, on
                 </table>
             )}
 
-            {error && <div className="text-red-600 mb-2">{error}</div>}
+            {error && <div className="banner-error mb-3">{error}</div>}
 
-            <div>
-                <button type="button" className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded mr-2"
-                    onClick={handleExit} disabled={uploading}>
-                    Exit
-                </button>
-                <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            <div className="flex gap-2 pt-3 border-t border-line">
+                <button type="submit" className="btn-primary"
                     disabled={uploading || rows.length === 0}>
                     {uploading ? "Uploading..." : "Upload to Dynamics"}
+                </button>
+                <button type="button" className="btn-secondary"
+                    onClick={handleExit} disabled={uploading}>
+                    Exit
                 </button>
             </div>
         </form>

@@ -25,10 +25,21 @@ const App = () => {
     }, [])
   
     return (
-      <div>
-        {loggedInAccount ? (
-            <Home />
-        ):<p>Use the browser tab that has been launched to log in</p>}
+      <div className="min-h-screen flex flex-col">
+        <header className="bg-primary text-white px-6 py-3 shadow-sm flex items-center gap-2">
+          <span className="font-semibold text-base tracking-wide">Timesheeter</span>
+        </header>
+        <main className="flex-1 flex flex-col items-center px-8 py-10">
+          <div className="w-full max-w-3xl">
+            {loggedInAccount ? (
+                <Home />
+            ):(
+                <div className="card p-6 text-sm text-ink">
+                    Use the browser tab that has been launched to log in.
+                </div>
+            )}
+          </div>
+        </main>
       </div>
     );
   };

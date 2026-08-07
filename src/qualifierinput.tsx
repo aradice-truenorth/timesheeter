@@ -75,7 +75,7 @@ const QualifierInput: React.FunctionComponent<QualifierInputProps> = (props) => 
         <div className="relative" ref={containerRef}>
             <input
                 type="text"
-                className="border rounded px-2 py-1 w-full mt-1 disabled:bg-gray-100 disabled:text-gray-400"
+                className="field w-full mt-1"
                 placeholder={placeholder ?? "Qualifier (optional)"}
                 value={value}
                 disabled={disabled}
@@ -87,11 +87,11 @@ const QualifierInput: React.FunctionComponent<QualifierInputProps> = (props) => 
                 onKeyDown={handleKeyDown}
             />
             {isOpen && filteredSuggestions.length > 0 && (
-                <ul className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-white border rounded shadow">
+                <ul className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-surface border border-line-strong rounded-sm shadow-md text-sm">
                     {filteredSuggestions.map((suggestion, index) => (
                         <li
                             key={suggestion}
-                            className={`px-2 py-1 cursor-pointer ${index === highlightedIndex ? "bg-blue-500 text-white" : "hover:bg-gray-100"}`}
+                            className={`px-2.5 py-1.5 cursor-pointer ${index === highlightedIndex ? "bg-primary text-white" : "hover:bg-highlight"}`}
                             onMouseDown={(e) => {
                                 e.preventDefault();
                                 selectSuggestion(suggestion);

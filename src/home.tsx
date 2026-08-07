@@ -20,10 +20,11 @@ const Home = () => {
         default:
             return (
                 <VerticalContent>
-                    <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded block mb-20" onClick={() => setHomeScreenState(HomeScreenState.Recording)}>
+                    <h2 className="text-lg font-semibold text-ink mb-4">Timesheeter</h2>
+                    <button className="btn-primary w-fit mb-3" onClick={() => setHomeScreenState(HomeScreenState.Recording)}>
                         Record Time
                     </button>
-                    <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded block" onClick={() => setHomeScreenState(HomeScreenState.Editing)}>
+                    <button className="btn-secondary w-fit" onClick={() => setHomeScreenState(HomeScreenState.Editing)}>
                         Edit and Upload Entries
                     </button>
                 </VerticalContent>
