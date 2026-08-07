@@ -56,22 +56,19 @@ const EditingDaysList: React.FunctionComponent<EditingDaysListProps> = ({ onExit
         <VerticalContent>
             <h2 className="text-lg font-semibold text-ink mb-4">Edit and Upload Entries</h2>
             {successMessage && <div className="banner-success mb-4">{successMessage}</div>}
-            {availableDays.length === 0
-                ? <p className="mb-4 text-sm text-ink-soft">No days available to edit.</p>
-                : (
-                    <div className="flex flex-row flex-wrap gap-2 mb-4">
-                        {availableDays.map(date => (
-                            <button key={date} className="btn-secondary w-fit"
-                                onClick={() => setSelectedDate(date)}>
-                                {date}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            <button className="btn-secondary w-fit"
-                onClick={onExit}>
-                Exit
-            </button>
+            {availableDays.length === 0 && <p className="mb-4 text-sm text-ink-soft">No days available to edit.</p>}
+            <div className="flex flex-row flex-wrap items-center gap-2">
+                {availableDays.map(date => (
+                    <button key={date} className="btn-secondary w-fit"
+                        onClick={() => setSelectedDate(date)}>
+                        {date}
+                    </button>
+                ))}
+                <button className="btn-secondary w-fit"
+                    onClick={onExit}>
+                    Exit
+                </button>
+            </div>
         </VerticalContent>
     );
 };
