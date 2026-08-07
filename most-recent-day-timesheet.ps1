@@ -1,0 +1,1 @@
+ls "${Env:AppData}\timesheeter\recorded" | Sort-Object -Property Name -Descending -Top 1 | cat | ConvertFrom-Json | %{[pscustomobject] @{start=$_.startsAt.ToString("hh:mm");end=$_.endsAt.ToString("hh:mm");project=$_.project.msdyn_subject;task=$_.task.msdyn_subject;qualifier=$_.qualifier}}
