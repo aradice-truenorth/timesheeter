@@ -21,12 +21,14 @@ const Home = () => {
             return (
                 <VerticalContent>
                     <h2 className="text-lg font-semibold text-ink mb-4">Timesheeter</h2>
-                    <button className="btn-primary w-fit mb-3" onClick={() => setHomeScreenState(HomeScreenState.Recording)}>
-                        Record Time
-                    </button>
-                    <button className="btn-secondary w-fit" onClick={() => setHomeScreenState(HomeScreenState.Editing)}>
-                        Edit and Upload Entries
-                    </button>
+                    <div className="flex flex-row gap-2">
+                        <button className="btn-primary w-fit" onClick={() => setHomeScreenState(HomeScreenState.Recording)}>
+                            Record Time
+                        </button>
+                        <button className="btn-secondary w-fit" onClick={() => setHomeScreenState(HomeScreenState.Editing)}>
+                            Edit and Upload Entries
+                        </button>
+                    </div>
                 </VerticalContent>
             );
     }

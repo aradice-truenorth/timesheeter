@@ -59,9 +59,9 @@ const EditingDaysList: React.FunctionComponent<EditingDaysListProps> = ({ onExit
             {availableDays.length === 0
                 ? <p className="mb-4 text-sm text-ink-soft">No days available to edit.</p>
                 : (
-                    <div className="flex flex-col gap-2 mb-4">
+                    <div className="flex flex-row flex-wrap gap-2 mb-4">
                         {availableDays.map(date => (
-                            <button key={date} className="btn-secondary justify-start w-fit"
+                            <button key={date} className="btn-secondary w-fit"
                                 onClick={() => setSelectedDate(date)}>
                                 {date}
                             </button>
