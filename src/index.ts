@@ -1,3 +1,4 @@
+import * as path from 'node:path';
 import { app, BrowserWindow, globalShortcut, ipcMain, Menu } from 'electron';
 import { LoggedInAccount } from './ipctypes';
 import { MyDynamicsWebApi } from './auth/dynamicswebapiconnection';
@@ -34,6 +35,10 @@ const createWindow = async (): Promise<void> => {
   const mainWindow = new BrowserWindow({
     height: 600,
     width: 800,
+    // Only used in dev - a packaged build gets its icon from packagerConfig.icon instead. The
+    // path reaches out of the webpack output (.webpack/main) to the repo-root assets folder,
+    // since this file isn't bundled by webpack's asset pipeline.
+    icon: path.join(__dirname, '../../assets/icon.ico'),
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
