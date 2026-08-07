@@ -203,7 +203,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                 setErrorMessage("Select a recent project/task.");
                 return;
             }
-            entry = { startsAt, endsAt, isSplit: false, project: selected.project, task: selected.task, qualifier };
+            entry = { startsAt, endsAt, isSplit: false, project: selected.project, task: selected.task, qualifier: selected.qualifier };
         } else {
             const project = (projects ?? []).find(p => p.msdyn_projectid === customProjectId);
             const task = (tasks ?? []).find(t => t.msdyn_projecttaskid === customTaskId);
@@ -352,14 +352,12 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                                 onReload={customProjectId ? reloadTasks : undefined}
                                 reloading={tasksReloading} />
                         </div>
-                    </div>
-                )}
-                {workMode !== "split" && (
                     <QualifierInput
                         value={qualifier}
                         onChange={setQualifier}
                         suggestions={qualifierSuggestions}
                         placeholder="Qualifier (optional)" />
+                    </div>
                 )}
             </div>
 
