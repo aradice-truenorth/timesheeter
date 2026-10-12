@@ -96,6 +96,7 @@ app.on('will-quit', () => {
   ipcMain.handle('get-logged-in-user', () => userService.getLoggedInUser() )
   ipcMain.handle('get-all-projects', () => projectService.getAllProjects() )
   ipcMain.handle('get-tasks-for-project', (_, msdyn_projectid: string) => projectService.getTasksForProject(msdyn_projectid) )
+  ipcMain.handle('get-case-titles', (_, caseNumbers: string[]) => projectService.getCaseTitles(caseNumbers) )
   ipcMain.handle('get-all-recorded-data', () => recordedDataService.getAll() )
   ipcMain.handle('save-recorded-data', (_, date: string, entries: RecordedTimeEntry[]) => recordedDataService.save(date, entries) )
   ipcMain.handle('get-uploaded-days', () => recordedDataService.getUploadedDays() )

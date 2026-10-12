@@ -4,6 +4,7 @@ import FullWidthContent from "./fullwidthcontent";
 import Loading from "./loading";
 import { useEscapeKey } from "./useescapekey";
 import VerticalContent from "./verticalcontent";
+import { fillInCaseTitles, taskDisplayName, withCaseTitle } from "./casetitles";
 
 export interface EditingDayProps {
     date: string; // ISO date string
@@ -26,7 +27,11 @@ const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, on
 
     useEffect(() => {
         window.mainProcess.getAllRecordedData().then((allData) => {
-            setRows(processDayEntries(allData[date] || []));
+            const processed = processDayEntries(allData[date] || []);
+            setRows(processed);
+            fillInCaseTitles(processed.map(row => row.task)).then((caseTitles) => {
+                setRows((current) => current && current.map(row => ({ ...row, task: withCaseTitle(row.task, caseTitles) })));
+            });
         });
     }, [date]);
 
@@ -141,7 +146,7 @@ const EditingDay: React.FunctionComponent<EditingDayProps> = ({ date, onExit, on
                         {rows.map((row, index) => (
                             <tr key={index}>
                                 <td>{row.project.msdyn_subject}</td>
-                                <td>{row.task.msdyn_subject}</td>
+                                <td>{taskDisplayName(row.task)}</td>
                                 <td>
                                     <input type="text" data-row={index} data-col="qualifier"
                                         className="field w-full"

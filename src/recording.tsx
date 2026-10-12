@@ -1,25 +1,26 @@
 import { useEffect, useState } from "react";
 import { RecordedTimeEntry, WorkTimeEntry } from "./services/recordeddataservice";
 import Loading from "./loading";
-import RecordEntry, { MostRecentlyUsedEntry, RecentQualifierUsage, SaveEntryResult } from "./recordentry";
+import RecordEntry, { MostRecentlyUsedEntry, RecentQualifierUsage, SaveEntryResult, UndoEntryResult, toTimeInputValue } from "./recordentry";
 import { useEscapeKey } from "./useescapekey";
 import VerticalContent from "./verticalcontent";
+import { fillInCaseTitles, taskDisplayName, withCaseTitle } from "./casetitles";
 
-const START_OF_DAY = "08:00";
 const MAX_MOST_RECENTLY_USED = 10;
 const RECENT_QUALIFIER_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+const DAY_CHANGE_CHECK_INTERVAL_MS = 30 * 1000;
+const DAY_CHANGED_MESSAGE = "The date has changed since this screen was loaded, so it has been refreshed for today. Please check the entry and try again.";
 
-const getStartOfDay = (): Date =>  {
-    const now = new Date();
-    const startOfDayParts = START_OF_DAY.split(":").map(part => parseInt(part, 10));
-    now.setHours(startOfDayParts[0], startOfDayParts[1], 0, 0);
-    return now;
-}
+const pad2 = (value: number): string => (value < 10 ? `0${value}` : `${value}`);
+
+// The local (not UTC) calendar date as YYYY-MM-DD - toISOString() would put entries made
+// before 1am BST against the previous day.
+const localDateKey = (date: Date): string => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 
 const mruKey = (item: MostRecentlyUsedEntry): string => `${item.project.msdyn_projectid}|${item.task.msdyn_projecttaskid}|${item.qualifier}`;
 
 const describeEntry = (entry: RecordedTimeEntry): string =>
-    entry.isSplit ? "Split" : `${entry.project.msdyn_subject} / ${entry.task.msdyn_subject}`;
+    entry.isSplit ? "Split" : `${entry.project.msdyn_subject} / ${taskDisplayName(entry.task)}`;
 
 const computeMostRecentlyUsed = (allData: Record<string, RecordedTimeEntry[]>): MostRecentlyUsedEntry[] => {
     const allEntries: RecordedTimeEntry[] = Object.keys(allData).reduce((acc: RecordedTimeEntry[], date) => acc.concat(allData[date]), []);
@@ -85,24 +86,55 @@ const Recording: React.FunctionComponent<RecordingProps> = ({ onExit }) => {
         - LocalStorageService
 
     */
-    const today = new Date().toISOString().substring(0, 10);
+    const [screenOpenedAt] = useState<Date>(() => new Date());
+    // Held in state (rather than recomputed per render) so that a screen left open overnight
+    // notices the date change, reloads, and stops recording against yesterday.
+    const [today, setToday] = useState<string>(() => localDateKey(new Date()));
     const [recordedData, setRecordedData] = useState<RecordedTimeEntry[] | null>(null);
     const [mostRecentlyUsed, setMostRecentlyUsed] = useState<MostRecentlyUsedEntry[]>([]);
     const [recentQualifierUsage, setRecentQualifierUsage] = useState<RecentQualifierUsage[]>([]);
     const [dayAlreadyUploaded, setDayAlreadyUploaded] = useState<boolean | null>(null);
     useEffect(() => {
+        const checkForDayChange = () => setToday(localDateKey(new Date()));
+        const interval = setInterval(checkForDayChange, DAY_CHANGE_CHECK_INTERVAL_MS);
+        window.addEventListener("focus", checkForDayChange);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener("focus", checkForDayChange);
+        };
+    }, []);
+    useEffect(() => {
+        setRecordedData(null);
+        setDayAlreadyUploaded(null);
         window.mainProcess.getAllRecordedData().then((allData) => {
             setRecordedData(allData[today] || []);
-            setMostRecentlyUsed(computeMostRecentlyUsed(allData));
+            const mostRecent = computeMostRecentlyUsed(allData);
+            setMostRecentlyUsed(mostRecent);
+            fillInCaseTitles(mostRecent.map(item => item.task)).then((caseTitles) => {
+                setMostRecentlyUsed((current) => current.map(item => ({ ...item, task: withCaseTitle(item.task, caseTitles) })));
+            });
             setRecentQualifierUsage(computeRecentQualifierUsage(allData));
         });
         window.mainProcess.getUploadedDays().then((uploadedDays) => {
             setDayAlreadyUploaded(uploadedDays.indexOf(today) !== -1);
         });
     }, [today]);
+    // Last line of defence if the day rolled over before the interval/focus check caught it.
+    const dayHasChanged = (): boolean => {
+        const actualToday = localDateKey(new Date());
+        if (actualToday === today) {
+            return false;
+        }
+        setToday(actualToday);
+        return true;
+    };
+
     const validateEntry = async (newEntry: RecordedTimeEntry): Promise<SaveEntryResult> => {
         if (!recordedData) {
             throw new Error("validateEntry called before recorded data finished loading");
+        }
+        if (dayHasChanged()) {
+            return { success: false, errorMessage: DAY_CHANGED_MESSAGE };
         }
         const overlapsWith = recordedData.filter(existingEntry =>
             (newEntry.startsAt < existingEntry.endsAt && newEntry.endsAt > existingEntry.startsAt)
@@ -110,7 +142,7 @@ const Recording: React.FunctionComponent<RecordingProps> = ({ onExit }) => {
         if (overlapsWith.length > 0) {
             return {
                 success: false,
-                errorMessage: `The new entry overlaps with: ${overlapsWith.map(entry => `${describeEntry(entry)} ${entry.startsAt.toISOString().substring(11, 16)}-${entry.endsAt.toISOString().substring(11, 16)}`).join("; ")}`
+                errorMessage: `The new entry overlaps with: ${overlapsWith.map(entry => `${describeEntry(entry)} ${toTimeInputValue(entry.startsAt)}-${toTimeInputValue(entry.endsAt)}`).join("; ")}`
             };
         }
         const updatedEntries = [...recordedData, newEntry].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
@@ -131,6 +163,23 @@ const Recording: React.FunctionComponent<RecordingProps> = ({ onExit }) => {
             }
         }
         return {success: true};
+    };
+
+    const undoLastEntry = async (): Promise<UndoEntryResult> => {
+        if (!recordedData || recordedData.length === 0) {
+            return { success: false, errorMessage: "There is nothing to undo." };
+        }
+        if (dayHasChanged()) {
+            return { success: false, errorMessage: DAY_CHANGED_MESSAGE };
+        }
+        const remainingEntries = recordedData.slice(0, -1);
+        await window.mainProcess.saveRecordedData(today, remainingEntries);
+        setRecordedData(remainingEntries);
+        return {
+            success: true,
+            undoneEntry: recordedData[recordedData.length - 1],
+            lastEntryEndsAt: remainingEntries.length > 0 ? remainingEntries[remainingEntries.length - 1].endsAt : null
+        };
     };
 
     // Only handles Escape for the "already uploaded" dead-end below - RecordEntry receives this
@@ -156,12 +205,15 @@ const Recording: React.FunctionComponent<RecordingProps> = ({ onExit }) => {
 
     return (
         <RecordEntry
+            key={today}
             lastEntryEndsAt={recordedData.length > 0 ? recordedData[recordedData.length - 1].endsAt : null}
-            startOfDayAt={getStartOfDay()}
+            screenOpenedAt={screenOpenedAt}
+            screenOpenedToday={localDateKey(screenOpenedAt) === today}
             mostRecentlyUsed={mostRecentlyUsed}
             recentQualifierUsage={recentQualifierUsage}
             totalMinutesToday={totalMinutesToday}
             saveEntry={validateEntry}
+            undoLastEntry={undoLastEntry}
             onExit={onExit} />
     );
 };

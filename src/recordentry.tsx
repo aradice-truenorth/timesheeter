@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Project, ProjectTask } from "./services/projectservice";
 import { RecordedTimeEntry } from "./services/recordeddataservice";
 import ComboBox from "./combobox";
+import { taskDisplayName } from "./casetitles";
 import QualifierInput from "./qualifierinput";
 import FullWidthContent from "./fullwidthcontent";
 import { useEscapeKey } from "./useescapekey";
@@ -12,6 +13,14 @@ const SUCCESS_BANNER_TIMEOUT_MS = 1000;
 export interface SaveEntryResult {
     success: boolean;
     errorMessage?: string;
+}
+
+export interface UndoEntryResult {
+    success: boolean;
+    errorMessage?: string;
+    undoneEntry?: RecordedTimeEntry;
+    // End of whichever entry is now last for the day, after the undo.
+    lastEntryEndsAt?: Date | null;
 }
 
 export interface MostRecentlyUsedEntry {
@@ -28,21 +37,24 @@ export interface RecentQualifierUsage {
 
 export interface RecordEntryProps {
     lastEntryEndsAt: Date | null;
-    startOfDayAt: Date;
+    screenOpenedAt: Date;
+    // False if the screen has been open since a previous day.
+    screenOpenedToday: boolean;
     mostRecentlyUsed: MostRecentlyUsedEntry[];
     recentQualifierUsage: RecentQualifierUsage[];
     totalMinutesToday: number;
     saveEntry: (entry: RecordedTimeEntry) => Promise<SaveEntryResult>;
+    undoLastEntry: () => Promise<UndoEntryResult>;
     onExit: () => void;
 }
 
-type StartMode = "lastEntry" | "startOfDay" | "custom";
+type StartMode = "lastEntry" | "screenOpened" | "custom";
 type EndMode = "now" | "custom";
 type WorkMode = "split" | "mru" | "custom";
 
 const pad2 = (value: number): string => (value < 10 ? `0${value}` : `${value}`);
 
-const toTimeInputValue = (date: Date): string => `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+export const toTimeInputValue = (date: Date): string => `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 
 const fromTimeInputValue = (time: string, referenceDate: Date): Date => {
     const parts = time.split(":").map(part => parseInt(part, 10));
@@ -59,11 +71,18 @@ const formatDuration = (totalMinutes: number): string => {
 };
 
 const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
-    const { lastEntryEndsAt, startOfDayAt, mostRecentlyUsed, recentQualifierUsage, totalMinutesToday, saveEntry, onExit } = props;
+    const { lastEntryEndsAt, screenOpenedAt, screenOpenedToday, mostRecentlyUsed, recentQualifierUsage, totalMinutesToday, saveEntry, undoLastEntry, onExit } = props;
 
-    const defaultStartMode: StartMode = lastEntryEndsAt ? "lastEntry" : "startOfDay";
-    const [startMode, setStartMode] = useState<StartMode>(defaultStartMode);
-    const [startCustomTime, setStartCustomTime] = useState<string>(toTimeInputValue(lastEntryEndsAt ?? startOfDayAt));
+    // "Start of recording" only makes sense for the first entry of the day, and only if the
+    // screen was opened today.
+    const screenOpenedAvailable = screenOpenedToday && !lastEntryEndsAt;
+    const getDefaultStartMode = (lastEnd: Date | null): StartMode =>
+        lastEnd ? "lastEntry" : (screenOpenedToday ? "screenOpened" : "custom");
+    const getDefaultStartCustomTime = (lastEnd: Date | null): string =>
+        toTimeInputValue(lastEnd ?? (screenOpenedToday ? screenOpenedAt : new Date()));
+
+    const [startMode, setStartMode] = useState<StartMode>(getDefaultStartMode(lastEntryEndsAt));
+    const [startCustomTime, setStartCustomTime] = useState<string>(getDefaultStartCustomTime(lastEntryEndsAt));
     const [endMode, setEndMode] = useState<EndMode>("now");
     const [endCustomTime, setEndCustomTime] = useState<string>(toTimeInputValue(new Date()));
 
@@ -125,14 +144,9 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         focusWorkModeRadio(defaultWorkMode);
     }, []);
 
-    useEffect(() => {
-        // Reacts to the actual (fresh) prop rather than the value clearForm() closed over when
-        // the save that produced it was still in flight, so this is correct even for the very
-        // first entry of the day (where clearForm() only sees "no last entry yet").
-        if (lastEntryEndsAt) {
-            setStartMode("lastEntry");
-        }
-    }, [lastEntryEndsAt]);
+    // Lets an undo redisplay a task once the project's task list (re)loads - changing the
+    // project otherwise clears the selected task.
+    const pendingTaskIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         window.mainProcess.getAllProjects().then(setProjects);
@@ -145,7 +159,8 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
             return;
         }
         setTasks(null);
-        setCustomTaskId(null);
+        setCustomTaskId(pendingTaskIdRef.current);
+        pendingTaskIdRef.current = null;
         window.mainProcess.getTasksForProject(customProjectId).then(setTasks);
     }, [customProjectId]);
 
@@ -160,21 +175,24 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         });
     };
 
-    const resolveStart = (): Date => {
+    // Custom times are always taken as today's date (as of when Record is pressed).
+    const resolveStart = (): Date | null => {
         if (startMode === "lastEntry") {
-            return lastEntryEndsAt ?? startOfDayAt;
+            return lastEntryEndsAt;
         }
-        if (startMode === "startOfDay") {
-            return startOfDayAt;
+        if (startMode === "screenOpened") {
+            return screenOpenedAvailable ? screenOpenedAt : null;
         }
-        return fromTimeInputValue(startCustomTime, startOfDayAt);
+        return fromTimeInputValue(startCustomTime, new Date());
     };
 
-    const resolveEnd = (): Date => (endMode === "now" ? new Date() : fromTimeInputValue(endCustomTime, startOfDayAt));
+    const resolveEnd = (): Date => (endMode === "now" ? new Date() : fromTimeInputValue(endCustomTime, new Date()));
 
-    const clearForm = () => {
-        setStartMode(lastEntryEndsAt ? "lastEntry" : "startOfDay");
-        setStartCustomTime(toTimeInputValue(lastEntryEndsAt ?? startOfDayAt));
+    // Takes the post-save/post-undo last entry explicitly, since the prop this render closed
+    // over is stale while a save or undo is still in flight.
+    const clearForm = (lastEnd: Date | null = lastEntryEndsAt) => {
+        setStartMode(getDefaultStartMode(lastEnd));
+        setStartCustomTime(getDefaultStartCustomTime(lastEnd));
         setEndMode("now");
         setEndCustomTime(toTimeInputValue(new Date()));
         setWorkMode(mostRecentlyUsed.length > 0 ? "mru" : "custom");
@@ -188,6 +206,10 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
     const handleRecord = async () => {
         setErrorMessage(null);
         const startsAt = resolveStart();
+        if (!startsAt) {
+            setErrorMessage("Select a start time.");
+            return;
+        }
         const endsAt = resolveEnd();
         if (endsAt <= startsAt) {
             setErrorMessage("End time must be after start time.");
@@ -218,7 +240,8 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         const result = await saveEntry(entry);
         setSaving(false);
         if (result.success) {
-            clearForm();
+            // The day's last entry is now this one, or a later one recorded earlier.
+            clearForm(lastEntryEndsAt && lastEntryEndsAt > endsAt ? lastEntryEndsAt : endsAt);
             setQualifier("");
             focusWorkModeRadio(defaultWorkMode);
             setSuccessMessage("Entry recorded.");
@@ -229,6 +252,57 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         } else {
             setErrorMessage(result.errorMessage ?? "Failed to save entry.");
         }
+    };
+
+    const handleUndo = async () => {
+        setErrorMessage(null);
+        setSaving(true);
+        const result = await undoLastEntry();
+        setSaving(false);
+        if (!result.success || !result.undoneEntry) {
+            setErrorMessage(result.errorMessage ?? "Failed to undo the last entry.");
+            return;
+        }
+        const entry = result.undoneEntry;
+        const lastEnd = result.lastEntryEndsAt ?? null;
+        clearForm(lastEnd);
+
+        if (lastEnd && lastEnd.getTime() === entry.startsAt.getTime()) {
+            setStartMode("lastEntry");
+        } else if (!lastEnd && screenOpenedToday && screenOpenedAt.getTime() === entry.startsAt.getTime()) {
+            setStartMode("screenOpened");
+        } else {
+            setStartMode("custom");
+            setStartCustomTime(toTimeInputValue(entry.startsAt));
+        }
+        setEndMode("custom");
+        setEndCustomTime(toTimeInputValue(entry.endsAt));
+
+        if (entry.isSplit) {
+            setWorkMode("split");
+        } else {
+            const key = mruKey(entry);
+            if (mostRecentlyUsed.some(item => mruKey(item) === key)) {
+                setWorkMode("mru");
+                setSelectedMruKey(key);
+            } else {
+                setWorkMode("custom");
+                // Overrides clearForm()'s reset. If the project is unchanged the task-loading
+                // effect won't re-run, so the task has to be set directly.
+                setCustomProjectId(entry.project.msdyn_projectid);
+                if (customProjectId === entry.project.msdyn_projectid) {
+                    setCustomTaskId(entry.task.msdyn_projecttaskid);
+                } else {
+                    pendingTaskIdRef.current = entry.task.msdyn_projecttaskid;
+                }
+            }
+            setQualifier(entry.qualifier);
+        }
+        setSuccessMessage("Last entry undone - it is shown below so you can amend and re-record it.");
+        if (successTimeoutRef.current) {
+            clearTimeout(successTimeoutRef.current);
+        }
+        successTimeoutRef.current = setTimeout(() => setSuccessMessage(null), SUCCESS_BANNER_TIMEOUT_MS * 3);
     };
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -245,6 +319,11 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                     {successMessage}
                 </div>
             )}
+            {!screenOpenedToday && (
+                <div className="mb-4 banner-error">
+                    The date has changed since this screen was opened, so it has been refreshed for today.
+                </div>
+            )}
             <div className="mb-5 flex items-baseline justify-between border-b border-line pb-3">
                 <h2 className="text-lg font-semibold text-ink">Record Time</h2>
                 <span className="text-sm text-ink-soft">Recorded today: <span className="font-semibold text-ink">{formatDuration(totalMinutesToday)}</span></span>
@@ -258,13 +337,11 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                             onChange={() => setStartMode("lastEntry")} />
                         End of last entry{lastEntryEndsAt ? ` (${toTimeInputValue(lastEntryEndsAt)})` : " (none yet)"}
                     </label>
-                    {!lastEntryEndsAt && (
-                        <label className="radio-row">
-                            <input type="radio" className="accent-primary" name="startMode" checked={startMode === "startOfDay"}
-                                onChange={() => setStartMode("startOfDay")} />
-                            Start of day ({toTimeInputValue(startOfDayAt)})
-                        </label>
-                    )}
+                    <label className={`radio-row ${screenOpenedAvailable ? "" : "text-ink-soft"}`}>
+                        <input type="radio" className="accent-primary" name="startMode" checked={startMode === "screenOpened"} disabled={!screenOpenedAvailable}
+                            onChange={() => setStartMode("screenOpened")} />
+                        Start of recording ({toTimeInputValue(screenOpenedAt)})
+                    </label>
                     <label className="radio-row">
                         <input type="radio" className="accent-primary" name="startMode" checked={startMode === "custom"}
                             onChange={() => setStartMode("custom")} />
@@ -322,7 +399,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                                             <input type="radio" className="accent-primary" name="mruEntry" checked={selectedMruKey === key} onChange={selectItem} />
                                         </td>
                                         <td>{item.project.msdyn_subject}</td>
-                                        <td>{item.task.msdyn_subject}</td>
+                                        <td>{taskDisplayName(item.task)}</td>
                                         <td>{item.qualifier}</td>
                                     </tr>
                                 );
@@ -347,7 +424,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                         </div>
                         <div className="mb-2">
                             <ComboBox
-                                options={(tasks ?? []).map(t => ({ value: t.msdyn_projecttaskid, label: t.msdyn_subject }))}
+                                options={(tasks ?? []).map(t => ({ value: t.msdyn_projecttaskid, label: taskDisplayName(t) }))}
                                 value={customTaskId}
                                 onChange={setCustomTaskId}
                                 placeholder={!customProjectId ? "Select a project first" : (tasks ? "Select a task..." : "Loading tasks...")}
@@ -372,8 +449,13 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                     Record
                 </button>
                 <button type="button" className="btn-secondary"
-                    onClick={clearForm} disabled={saving}>
+                    onClick={() => clearForm()} disabled={saving}>
                     Clear
+                </button>
+                <button type="button" className="btn-secondary"
+                    onClick={handleUndo} disabled={saving || !lastEntryEndsAt}
+                    title="Remove the last entry recorded today and show it again so it can be amended">
+                    Undo
                 </button>
                 <button type="button" className="btn-secondary"
                     onClick={onExit} disabled={saving}>

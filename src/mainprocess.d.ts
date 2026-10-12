@@ -7,7 +7,8 @@ export interface IMainProcessAPI {
   onAuthenticated: (callback: (loggedInUser: LoggedInAccount) => void) => void,
   getLoggedInUser(): Promise<LoggedInAccount>,
   getAllProjects(): Promise<Project[]>,
-  getTasksForProject(msdyn_projectid: string): Promise<ProjectTask[]>
+  getTasksForProject(msdyn_projectid: string): Promise<ProjectTask[]>,
+  getCaseTitles(caseNumbers: string[]): Promise<Record<string, string>>,
   getAllRecordedData(): Promise<Record<string, RecordedTimeEntry[]>>,
   saveRecordedData(date: string, entries: RecordedTimeEntry[]): Promise<void>,
   getUploadedDays(): Promise<string[]>,

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 export interface ComboBoxOption {
     value: string;
@@ -25,7 +25,6 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
     // user has actually pressed ArrowDown/ArrowUp (or hovered), so an unmodified Enter falls
     // through to the surrounding form instead of hijacking it.
     const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
-    const containerRef = useRef<HTMLDivElement>(null);
 
     // Kept in sync with the selected option whenever the dropdown isn't actively being typed in,
     // so switching selection externally (e.g. clearing the project) updates the displayed text.
@@ -35,25 +34,18 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
         }
     }, [selectedOption?.label, isOpen]);
 
-    useEffect(() => {
-        if (!isOpen) {
-            return;
-        }
-        const handleClickOutside = (e: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-                setIsOpen(false);
-                setSearchText(selectedOption?.label ?? "");
-            }
-        };
-        window.addEventListener("mousedown", handleClickOutside);
-        return () => window.removeEventListener("mousedown", handleClickOutside);
-    }, [isOpen, selectedOption?.label]);
-
     const filteredOptions = isOpen
         ? options.filter((option) => option.label.toLowerCase().includes(searchText.toLowerCase()))
         : options;
 
+    // Once a value is selected the field is locked: it can't be typed over or re-searched, only
+    // cleared with Backspace/Delete, and focusing it (e.g. tabbing back in) leaves it alone.
+    const isLocked = selectedOption !== null;
+
     const openDropdown = () => {
+        if (isLocked) {
+            return;
+        }
         setIsOpen(true);
         setSearchText("");
         setHighlightedIndex(-1);
@@ -66,11 +58,22 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (isLocked) {
+            if (e.key === "Backspace" || e.key === "Delete") {
+                e.preventDefault();
+                onChange(null);
+                setSearchText("");
+                setIsOpen(true);
+                setHighlightedIndex(-1);
+            }
+            return;
+        }
         if (e.key === "Escape" && isOpen) {
             e.preventDefault();
             e.stopPropagation();
             setIsOpen(false);
-            setSearchText(selectedOption?.label ?? "");
+            // Nothing is selected here (a selected field is locked and handled above).
+            setSearchText("");
             return;
         }
         if (!isOpen) {
@@ -97,14 +100,20 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
 
     return (
         <div className="flex gap-2">
-            <div className="relative flex-1" ref={containerRef}>
+            <div className="relative flex-1">
                 <input
                     type="text"
-                    className="field w-full"
+                    className={`field w-full ${isLocked ? "cursor-default" : ""}`}
                     value={searchText}
                     placeholder={placeholder ?? "Select..."}
                     disabled={disabled}
+                    readOnly={isLocked}
+                    title={isLocked ? "Press Backspace or Delete to clear" : undefined}
                     onFocus={openDropdown}
+                    onBlur={() => {
+                        setIsOpen(false);
+                        setSearchText(selectedOption?.label ?? "");
+                    }}
                     onChange={(e) => {
                         setIsOpen(true);
                         setSearchText(e.target.value);
@@ -113,7 +122,8 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
                     onKeyDown={handleKeyDown}
                 />
                 {isOpen && (
-                    <ul className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-surface border border-line-strong rounded-sm shadow-md text-sm">
+                    <ul className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-surface border border-line-strong rounded-sm shadow-md text-sm"
+                        onMouseDown={(e) => e.preventDefault() /* keep focus in the input, e.g. when dragging the scrollbar */}>
                         {filteredOptions.length === 0 ? (
                             <li className="px-2.5 py-1.5 text-ink-soft">No matches</li>
                         ) : (
