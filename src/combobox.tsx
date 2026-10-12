@@ -72,7 +72,8 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
             e.preventDefault();
             e.stopPropagation();
             setIsOpen(false);
-            setSearchText(selectedOption?.label ?? "");
+            // Nothing is selected here (a selected field is locked and handled above).
+            setSearchText("");
             return;
         }
         if (!isOpen) {
