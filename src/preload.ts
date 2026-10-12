@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('mainProcess', {
   getLoggedInUser: () => ipcRenderer.invoke('get-logged-in-user'),
   getAllProjects: () => ipcRenderer.invoke('get-all-projects'),
   getTasksForProject: (msdyn_projectid: string) => ipcRenderer.invoke('get-tasks-for-project', msdyn_projectid),
+  getCaseTitles: (caseNumbers: string[]) => ipcRenderer.invoke('get-case-titles', caseNumbers),
   getAllRecordedData: () => ipcRenderer.invoke('get-all-recorded-data'),
   saveRecordedData: (date: string, entries: RecordedTimeEntry[]) => ipcRenderer.invoke('save-recorded-data', date, entries),
   getUploadedDays: () => ipcRenderer.invoke('get-uploaded-days'),

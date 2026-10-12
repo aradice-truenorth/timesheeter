@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Project, ProjectTask } from "./services/projectservice";
 import { RecordedTimeEntry } from "./services/recordeddataservice";
 import ComboBox from "./combobox";
+import { taskDisplayName } from "./casetitles";
 import QualifierInput from "./qualifierinput";
 import FullWidthContent from "./fullwidthcontent";
 import { useEscapeKey } from "./useescapekey";
@@ -398,7 +399,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                                             <input type="radio" className="accent-primary" name="mruEntry" checked={selectedMruKey === key} onChange={selectItem} />
                                         </td>
                                         <td>{item.project.msdyn_subject}</td>
-                                        <td>{item.task.msdyn_subject}</td>
+                                        <td>{taskDisplayName(item.task)}</td>
                                         <td>{item.qualifier}</td>
                                     </tr>
                                 );
@@ -423,7 +424,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                         </div>
                         <div className="mb-2">
                             <ComboBox
-                                options={(tasks ?? []).map(t => ({ value: t.msdyn_projecttaskid, label: t.msdyn_subject }))}
+                                options={(tasks ?? []).map(t => ({ value: t.msdyn_projecttaskid, label: taskDisplayName(t) }))}
                                 value={customTaskId}
                                 onChange={setCustomTaskId}
                                 placeholder={!customProjectId ? "Select a project first" : (tasks ? "Select a task..." : "Loading tasks...")}

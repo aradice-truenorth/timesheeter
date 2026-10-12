@@ -4,6 +4,7 @@ import Loading from "./loading";
 import RecordEntry, { MostRecentlyUsedEntry, RecentQualifierUsage, SaveEntryResult, UndoEntryResult, toTimeInputValue } from "./recordentry";
 import { useEscapeKey } from "./useescapekey";
 import VerticalContent from "./verticalcontent";
+import { fillInCaseTitles, taskDisplayName, withCaseTitle } from "./casetitles";
 
 const MAX_MOST_RECENTLY_USED = 10;
 const RECENT_QUALIFIER_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
@@ -19,7 +20,7 @@ const localDateKey = (date: Date): string => `${date.getFullYear()}-${pad2(date.
 const mruKey = (item: MostRecentlyUsedEntry): string => `${item.project.msdyn_projectid}|${item.task.msdyn_projecttaskid}|${item.qualifier}`;
 
 const describeEntry = (entry: RecordedTimeEntry): string =>
-    entry.isSplit ? "Split" : `${entry.project.msdyn_subject} / ${entry.task.msdyn_subject}`;
+    entry.isSplit ? "Split" : `${entry.project.msdyn_subject} / ${taskDisplayName(entry.task)}`;
 
 const computeMostRecentlyUsed = (allData: Record<string, RecordedTimeEntry[]>): MostRecentlyUsedEntry[] => {
     const allEntries: RecordedTimeEntry[] = Object.keys(allData).reduce((acc: RecordedTimeEntry[], date) => acc.concat(allData[date]), []);
@@ -107,7 +108,11 @@ const Recording: React.FunctionComponent<RecordingProps> = ({ onExit }) => {
         setDayAlreadyUploaded(null);
         window.mainProcess.getAllRecordedData().then((allData) => {
             setRecordedData(allData[today] || []);
-            setMostRecentlyUsed(computeMostRecentlyUsed(allData));
+            const mostRecent = computeMostRecentlyUsed(allData);
+            setMostRecentlyUsed(mostRecent);
+            fillInCaseTitles(mostRecent.map(item => item.task)).then((caseTitles) => {
+                setMostRecentlyUsed((current) => current.map(item => ({ ...item, task: withCaseTitle(item.task, caseTitles) })));
+            });
             setRecentQualifierUsage(computeRecentQualifierUsage(allData));
         });
         window.mainProcess.getUploadedDays().then((uploadedDays) => {
