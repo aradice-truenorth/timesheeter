@@ -14,18 +14,22 @@ export const extractCaseNumber = (taskSubject: string): string | null => {
 export const taskDisplayName = (task: ProjectTask): string =>
     task.caseTitle ? `${task.msdyn_subject} – ${task.caseTitle}` : task.msdyn_subject;
 
-// Case numbers of support-call tasks that don't have a title yet (e.g. entries recorded before
-// titles were captured).
-export const caseNumbersMissingTitles = (tasks: ProjectTask[]): string[] => {
+// Distinct case numbers of the support-call tasks among these.
+export const caseNumbersOf = (tasks: ProjectTask[]): string[] => {
     const numbers = new Set<string>();
     for (const task of tasks) {
-        const caseNumber = task.caseTitle ? null : extractCaseNumber(task.msdyn_subject);
+        const caseNumber = extractCaseNumber(task.msdyn_subject);
         if (caseNumber) {
             numbers.add(caseNumber);
         }
     }
     return Array.from(numbers);
 };
+
+// Case numbers of support-call tasks that don't have a title yet (e.g. entries recorded before
+// titles were captured).
+export const caseNumbersMissingTitles = (tasks: ProjectTask[]): string[] =>
+    caseNumbersOf(tasks.filter(task => !task.caseTitle));
 
 export const withCaseTitle = (task: ProjectTask, caseTitles: Record<string, string>): ProjectTask => {
     if (task.caseTitle) {

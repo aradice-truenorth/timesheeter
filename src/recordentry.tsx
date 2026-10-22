@@ -6,6 +6,7 @@ import { taskDisplayName } from "./casetitles";
 import QualifierInput from "./qualifierinput";
 import FullWidthContent from "./fullwidthcontent";
 import { useEscapeKey } from "./useescapekey";
+import { useUndoKey } from "./useundokey";
 import VerticalContent from "./verticalcontent";
 
 const SUCCESS_BANNER_TIMEOUT_MS = 1000;
@@ -73,9 +74,11 @@ const formatDuration = (totalMinutes: number): string => {
 const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
     const { lastEntryEndsAt, screenOpenedAt, screenOpenedToday, mostRecentlyUsed, recentQualifierUsage, totalMinutesToday, saveEntry, undoLastEntry, onExit } = props;
 
-    // "Start of recording" only makes sense for the first entry of the day, and only if the
-    // screen was opened today.
-    const screenOpenedAvailable = screenOpenedToday && !lastEntryEndsAt;
+    // "Start of recording" is only offered if the screen was opened today, and at or after the end
+    // of the day's last entry - entries don't overlap, so starting then can't overlap any of them.
+    const isScreenOpenedAvailable = (lastEnd: Date | null): boolean =>
+        screenOpenedToday && (!lastEnd || screenOpenedAt.getTime() >= lastEnd.getTime());
+    const screenOpenedAvailable = isScreenOpenedAvailable(lastEntryEndsAt);
     const getDefaultStartMode = (lastEnd: Date | null): StartMode =>
         lastEnd ? "lastEntry" : (screenOpenedToday ? "screenOpened" : "custom");
     const getDefaultStartCustomTime = (lastEnd: Date | null): string =>
@@ -95,6 +98,10 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
     const [tasks, setTasks] = useState<ProjectTask[] | null>(null);
     const [tasksReloading, setTasksReloading] = useState<boolean>(false);
     const [customTaskId, setCustomTaskId] = useState<string | null>(null);
+    // The task of an undone custom entry. It may be missing from its project's task list (e.g. a
+    // support call closed since, which the list leaves out), so it's offered alongside the loaded
+    // tasks to keep it selectable.
+    const [restoredTask, setRestoredTask] = useState<{ projectId: string; task: ProjectTask } | null>(null);
     const [qualifier, setQualifier] = useState<string>(mostRecentlyUsed.length > 0 ? mostRecentlyUsed[0].qualifier : "");
 
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -164,6 +171,14 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         window.mainProcess.getTasksForProject(customProjectId).then(setTasks);
     }, [customProjectId]);
 
+    const taskOptions = useMemo((): ProjectTask[] | null => {
+        if (!tasks || !restoredTask || restoredTask.projectId !== customProjectId
+            || tasks.some(t => t.msdyn_projecttaskid === restoredTask.task.msdyn_projecttaskid)) {
+            return tasks;
+        }
+        return [...tasks, restoredTask.task];
+    }, [tasks, restoredTask, customProjectId]);
+
     const reloadTasks = () => {
         if (!customProjectId) {
             return;
@@ -199,6 +214,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         setSelectedMruKey(mostRecentlyUsed.length > 0 ? mruKey(mostRecentlyUsed[0]) : null);
         setCustomProjectId(null);
         setCustomTaskId(null);
+        setRestoredTask(null);
         setQualifier(mostRecentlyUsed.length > 0 ? mostRecentlyUsed[0].qualifier : "");
         setErrorMessage(null);
     };
@@ -228,7 +244,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
             entry = { startsAt, endsAt, isSplit: false, project: selected.project, task: selected.task, qualifier: selected.qualifier };
         } else {
             const project = (projects ?? []).find(p => p.msdyn_projectid === customProjectId);
-            const task = (tasks ?? []).find(t => t.msdyn_projecttaskid === customTaskId);
+            const task = (taskOptions ?? []).find(t => t.msdyn_projecttaskid === customTaskId);
             if (!project || !task) {
                 setErrorMessage("Select a project and a task.");
                 return;
@@ -237,7 +253,9 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         }
 
         setSaving(true);
-        const result = await saveEntry(entry);
+        // A rejected save (e.g. the file write failing) would otherwise leave the form stuck with
+        // Record/Undo disabled and nothing reset.
+        const result = await saveEntry(entry).catch((err): SaveEntryResult => ({ success: false, errorMessage: `Failed to save entry: ${err}` }));
         setSaving(false);
         if (result.success) {
             // The day's last entry is now this one, or a later one recorded earlier.
@@ -257,7 +275,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
     const handleUndo = async () => {
         setErrorMessage(null);
         setSaving(true);
-        const result = await undoLastEntry();
+        const result = await undoLastEntry().catch((err): UndoEntryResult => ({ success: false, errorMessage: `Failed to undo the last entry: ${err}` }));
         setSaving(false);
         if (!result.success || !result.undoneEntry) {
             setErrorMessage(result.errorMessage ?? "Failed to undo the last entry.");
@@ -269,7 +287,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
 
         if (lastEnd && lastEnd.getTime() === entry.startsAt.getTime()) {
             setStartMode("lastEntry");
-        } else if (!lastEnd && screenOpenedToday && screenOpenedAt.getTime() === entry.startsAt.getTime()) {
+        } else if (isScreenOpenedAvailable(lastEnd) && screenOpenedAt.getTime() === entry.startsAt.getTime()) {
             setStartMode("screenOpened");
         } else {
             setStartMode("custom");
@@ -290,6 +308,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                 // Overrides clearForm()'s reset. If the project is unchanged the task-loading
                 // effect won't re-run, so the task has to be set directly.
                 setCustomProjectId(entry.project.msdyn_projectid);
+                setRestoredTask({ projectId: entry.project.msdyn_projectid, task: entry.task });
                 if (customProjectId === entry.project.msdyn_projectid) {
                     setCustomTaskId(entry.task.msdyn_projecttaskid);
                 } else {
@@ -304,6 +323,9 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         }
         successTimeoutRef.current = setTimeout(() => setSuccessMessage(null), SUCCESS_BANNER_TIMEOUT_MS * 3);
     };
+
+    // Same availability as the Undo button.
+    useUndoKey(handleUndo, !saving && !!lastEntryEndsAt);
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -424,7 +446,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
                         </div>
                         <div className="mb-2">
                             <ComboBox
-                                options={(tasks ?? []).map(t => ({ value: t.msdyn_projecttaskid, label: taskDisplayName(t) }))}
+                                options={(taskOptions ?? []).map(t => ({ value: t.msdyn_projecttaskid, label: taskDisplayName(t) }))}
                                 value={customTaskId}
                                 onChange={setCustomTaskId}
                                 placeholder={!customProjectId ? "Select a project first" : (tasks ? "Select a task..." : "Loading tasks...")}
