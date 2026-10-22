@@ -49,9 +49,9 @@ export class ProjectService {
         });
     }
 
-    // Support-call tasks whose case is no longer active (resolved or cancelled) are left out, so
-    // they can't be picked for new time. A task whose case can't be found, or can't be looked up,
-    // is still listed.
+    // Support-call tasks whose case is no longer active (resolved or cancelled), or no longer exists,
+    // are left out, so they can't be picked for new time. A task whose case lookup failed is still
+    // listed, so an outage doesn't empty the list.
     public async getTasksForProject(msdyn_projectid: string): Promise<ProjectTask[]> {
         const tasks = (await this.dynamicsApi.retrieveMultipleRequest<ProjectTask>({
             collection: 'msdyn_projecttasks',
@@ -59,13 +59,16 @@ export class ProjectService {
             filter: `statecode eq 0 and _msdyn_project_value eq ${msdyn_projectid}`,
             orderBy: ['msdyn_subject']
         })).value ?? [];
-        const cases = await this.lookUpCases(caseNumbersOf(tasks));
+        const { cases, failed } = await this.lookUpCases(caseNumbersOf(tasks));
         const caseTitles = titlesOf(cases);
         return tasks
             .filter(task => {
                 const caseNumber = extractCaseNumber(task.msdyn_subject);
-                const found = caseNumber ? cases[caseNumber] : undefined;
-                return !found || found.statecode === INCIDENT_STATE_ACTIVE;
+                if (!caseNumber) {
+                    return true;
+                }
+                const found = cases[caseNumber];
+                return found ? found.statecode === INCIDENT_STATE_ACTIVE : failed.has(caseNumber);
             })
             .map(task => withCaseTitle(task, caseTitles));
     }
@@ -74,13 +77,15 @@ export class ProjectService {
     // time is still logged against those. Failures (e.g. no read access to cases) are logged and
     // treated as "no titles found" - titles are a nicety, not something to block recording over.
     public async getCaseTitles(caseNumbers: string[]): Promise<Record<string, string>> {
-        return titlesOf(await this.lookUpCases(caseNumbers));
+        return titlesOf((await this.lookUpCases(caseNumbers)).cases);
     }
 
     // Maps upper-cased case numbers to the incidents found for them. Cases in a batch whose lookup
-    // fails are logged and simply missing from the result.
-    private async lookUpCases(caseNumbers: string[]): Promise<Record<string, Incident>> {
+    // fails are logged and returned in `failed`, so callers can tell them apart from cases that
+    // don't exist.
+    private async lookUpCases(caseNumbers: string[]): Promise<{ cases: Record<string, Incident>; failed: Set<string> }> {
         const result: Record<string, Incident> = {};
+        const failed = new Set<string>();
         for (let i = 0; i < caseNumbers.length; i += CASE_LOOKUP_BATCH_SIZE) {
             const batch = caseNumbers.slice(i, i + CASE_LOOKUP_BATCH_SIZE);
             try {
@@ -96,8 +101,9 @@ export class ProjectService {
                 }
             } catch (err) {
                 console.log(`Could not look up cases ${batch.join(', ')}:`, err);
+                batch.forEach(caseNumber => failed.add(caseNumber));
             }
         }
-        return result;
+        return { cases: result, failed };
     }
 }
