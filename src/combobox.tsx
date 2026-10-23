@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface ComboBoxOption {
     value: string;
@@ -25,6 +25,13 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
     // user has actually pressed ArrowDown/ArrowUp (or hovered), so an unmodified Enter falls
     // through to the surrounding form instead of hijacking it.
     const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+    const listRef = useRef<HTMLUListElement>(null);
+
+    // Only called for keyboard moves - doing it on hover would scroll the list under the pointer.
+    const highlightWithKeyboard = (index: number) => {
+        setHighlightedIndex(index);
+        (listRef.current?.children[index] as HTMLElement | undefined)?.scrollIntoView({ block: "nearest" });
+    };
 
     // Kept in sync with the selected option whenever the dropdown isn't actively being typed in,
     // so switching selection externally (e.g. clearing the project) updates the displayed text.
@@ -85,10 +92,10 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
         }
         if (e.key === "ArrowDown") {
             e.preventDefault();
-            setHighlightedIndex((current) => Math.min(current + 1, filteredOptions.length - 1));
+            highlightWithKeyboard(Math.min(highlightedIndex + 1, filteredOptions.length - 1));
         } else if (e.key === "ArrowUp") {
             e.preventDefault();
-            setHighlightedIndex((current) => Math.max(current - 1, 0));
+            highlightWithKeyboard(Math.max(highlightedIndex - 1, 0));
         } else if (e.key === "Enter" && highlightedIndex >= 0) {
             e.preventDefault();
             const option = filteredOptions[highlightedIndex];
@@ -122,7 +129,7 @@ const ComboBox: React.FunctionComponent<ComboBoxProps> = (props) => {
                     onKeyDown={handleKeyDown}
                 />
                 {isOpen && (
-                    <ul className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-surface border border-line-strong rounded-sm shadow-md text-sm"
+                    <ul ref={listRef} className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-surface border border-line-strong rounded-sm shadow-md text-sm"
                         onMouseDown={(e) => e.preventDefault() /* keep focus in the input, e.g. when dragging the scrollbar */}>
                         {filteredOptions.length === 0 ? (
                             <li className="px-2.5 py-1.5 text-ink-soft">No matches</li>
