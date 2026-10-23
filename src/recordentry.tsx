@@ -102,7 +102,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
     // support call closed since, which the list leaves out), so it's offered alongside the loaded
     // tasks to keep it selectable.
     const [restoredTask, setRestoredTask] = useState<{ projectId: string; task: ProjectTask } | null>(null);
-    const [qualifier, setQualifier] = useState<string>(mostRecentlyUsed.length > 0 ? mostRecentlyUsed[0].qualifier : "");
+    const [qualifier, setQualifier] = useState<string>("");
 
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -215,7 +215,7 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         setCustomProjectId(null);
         setCustomTaskId(null);
         setRestoredTask(null);
-        setQualifier(mostRecentlyUsed.length > 0 ? mostRecentlyUsed[0].qualifier : "");
+        setQualifier("");
         setErrorMessage(null);
     };
 
@@ -260,7 +260,6 @@ const RecordEntry: React.FunctionComponent<RecordEntryProps> = (props) => {
         if (result.success) {
             // The day's last entry is now this one, or a later one recorded earlier.
             clearForm(lastEntryEndsAt && lastEntryEndsAt > endsAt ? lastEntryEndsAt : endsAt);
-            setQualifier("");
             focusWorkModeRadio(defaultWorkMode);
             setSuccessMessage("Entry recorded.");
             if (successTimeoutRef.current) {
