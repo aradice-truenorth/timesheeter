@@ -19,6 +19,13 @@ const QualifierInput: React.FunctionComponent<QualifierInputProps> = (props) => 
     // through to the surrounding form instead of silently substituting the top match.
     const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
     const containerRef = useRef<HTMLDivElement>(null);
+    const listRef = useRef<HTMLUListElement>(null);
+
+    // Only called for keyboard moves - doing it on hover would scroll the list under the pointer.
+    const highlightWithKeyboard = (index: number) => {
+        setHighlightedIndex(index);
+        (listRef.current?.children[index] as HTMLElement | undefined)?.scrollIntoView({ block: "nearest" });
+    };
 
     const filteredSuggestions = suggestions.filter((suggestion) =>
         suggestion.toLowerCase().includes(value.toLowerCase()));
@@ -61,10 +68,10 @@ const QualifierInput: React.FunctionComponent<QualifierInputProps> = (props) => 
         }
         if (e.key === "ArrowDown") {
             e.preventDefault();
-            setHighlightedIndex((current) => Math.min(current + 1, filteredSuggestions.length - 1));
+            highlightWithKeyboard(Math.min(highlightedIndex + 1, filteredSuggestions.length - 1));
         } else if (e.key === "ArrowUp") {
             e.preventDefault();
-            setHighlightedIndex((current) => Math.max(current - 1, 0));
+            highlightWithKeyboard(Math.max(highlightedIndex - 1, 0));
         } else if (e.key === "Enter" && highlightedIndex >= 0) {
             const suggestion = filteredSuggestions[highlightedIndex];
             if (suggestion) {
@@ -90,7 +97,7 @@ const QualifierInput: React.FunctionComponent<QualifierInputProps> = (props) => 
                 onKeyDown={handleKeyDown}
             />
             {isOpen && filteredSuggestions.length > 0 && (
-                <ul className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-surface border border-line-strong rounded-sm shadow-md text-sm">
+                <ul ref={listRef} className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-surface border border-line-strong rounded-sm shadow-md text-sm">
                     {filteredSuggestions.map((suggestion, index) => (
                         <li
                             key={suggestion}
